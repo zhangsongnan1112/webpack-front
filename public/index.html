@@ -4,16 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= htmlWebpackPlugin.options.title %></title>
+    <title>
+        <%= htmlWebpackPlugin.options.title %>
+    </title>
 </head>
 <style>
     /* 核心样式：控制文本显示行数 */
     .text-gray-700 {
-          width: 500px;
-          
+        width: 500px;
+
     }
+
     .clamped {
-      
+
         display: -webkit-box;
         -webkit-line-clamp: 2;
         /* 默认显示2行 */
@@ -48,48 +51,48 @@
     <div class="box3">box3 sass</div>
 
     <br /><br /><br /><br />
-    <script src="../dist/js/main.js"></script>
     <script>
 
-        const observer = new IntersectionObserver((box) => {
-            console.log(box, 1)
-            box.forEach(item => {
-                if (item.isIntersecting && item.intersectionRatio === 1) {
-                    item.target.classList.add('red');
+        // const observer = new IntersectionObserver((box) => {
+        //     console.log(box, 1)
+        //     box.forEach(item => {
+        //         if (item.isIntersecting && item.intersectionRatio === 1) {
+        //             item.target.classList.add('red');
+        //         }
+        //     })
+
+        // },
+        //     {
+        //         // 当元素可见比例达到 30%、50%、100% 时触发回调
+        //         threshold: [0.3, 1],     // 默认值为 0（仅在元素刚进入视口时触发一次）
+        //         root: null,  // 观察的跟元素， 必须是目标元素的祖先节点 监听元素在某个滚动容器内的可见性
+        //         rootMargin: "100px 0px" // 根容器的扩展边距. , 元素进入视口前 100px 就触发回调
+        //     }
+        // )
+        // const box = document.querySelectorAll('.box')
+        // box.forEach(item => {
+        //     observer.observe(item)
+        // })
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const textEl = document.getElementById('textContent');
+            const btnEl = document.getElementById('toggleBtn');
+            let isExpanded = false;
+            // 切换展开/收起状态
+            btnEl.addEventListener('click', () => {
+
+                isExpanded = !isExpanded;
+
+                if (isExpanded) {
+                    textEl.classList.remove('clamped');
+                    btnEl.textContent = '收起';
+                } else {
+                    textEl.classList.add('clamped');
+                    btnEl.textContent = '展开';
                 }
-            })
-
-        },
-            {
-                // 当元素可见比例达到 30%、50%、100% 时触发回调
-                threshold: [0.3, 1],     // 默认值为 0（仅在元素刚进入视口时触发一次）
-                root: null,  // 观察的跟元素， 必须是目标元素的祖先节点 监听元素在某个滚动容器内的可见性
-                rootMargin: "100px 0px" // 根容器的扩展边距. , 元素进入视口前 100px 就触发回调
-            }
-        )
-        const box = document.querySelectorAll('.box')
-        box.forEach(item => {
-            observer.observe(item)
-        })
-
-        const textEl = document.getElementById('textContent');
-        const btnEl = document.getElementById('toggleBtn');
-        let isExpanded = false;
-
-        // 切换展开/收起状态
-        btnEl.addEventListener('click', () => {
-            isExpanded = !isExpanded;
-
-            if (isExpanded) {
-                // 展开：移除限制类
-                textEl.classList.remove('clamped');
-                btnEl.textContent = '收起';
-            } else {
-                // 收起：添加限制类
-                textEl.classList.add('clamped');
-                btnEl.textContent = '展开';
-            }
+            });
         });
+
 
     </script>
 </body>

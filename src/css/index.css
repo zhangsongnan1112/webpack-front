@@ -1,8 +1,8 @@
 
 .box {
     border: 1px solid rosybrown;
-    width: 100px;
-    height: 100px;
+    width: 200px;
+    height: 200px;
     background-image: url(../img/ke.png);
     background-size: cover;
 }

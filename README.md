@@ -137,7 +137,8 @@ plugins: [new ESLintPlugin({
 ```
 
 ### babel 
-Babel 的主要作用：将新的 JavaScript 语法转换为旧版本浏览器能够理解的语法。
+Babel 的主要作用：将新的 JavaScript 语法转换为旧版本浏览器能够理解的语法
+npm install -D babel-loader @babel/core @babel/preset-env     
 ###### 工作原理
 - 解析（Parse）：将源代码解析为抽象语法树（AST）。
 - 转换（Transform）：对 AST 进行修改（如替换新语法节点为旧语法节点）。
@@ -170,6 +171,108 @@ module.exports = {
     presets: ['@babel/preset-env'],
 }
 ```
+### 处理 html 资源
+自动生成或处理 HTML 文件，并自动注入 Webpack 打包后的 JS、CSS 等资源，解决手动管理资源路径的痛点。
+
+- 可以基于一个模板文件（如 public/index.html）生成最终的 HTML，无需手动编写。
+- 自动将 Webpack 打包后的 JS、CSS 等资源（含哈希值）注入到 HTML 中，避免手动写 script或link 标签。
+
+```
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+new HtmlWebpackPlugin(
+    {
+        template: path.resolve(__dirname, 'public/index.html'),
+        filename: 'index.html',
+        inject: 'body',        // JS 注入到 body 底部
+        title: 'webpack',
+        hash: true,
+        minify: {                     // 压缩配置（生产环境）
+            collapseWhitespace: true,   // 移除空格
+            removeComments: true,       // 移除注释
+            removeRedundantAttributes: true
+        },
+        hash: true,
+    }
+)
+```
+
+### 搭建开发服务
+用于快速搭建本地开发服务器，支持实时重新加载（live reloading） 和模块热替换（HMR），大幅提升开发效率
+npm install webpack-dev-server -D
+```
+
+devServer: {
+    port: 3000, // 端口号（默认 8080）
+    open: true, // 启动后自动打开浏览器
+    hot: true, // 启用模块热替换（HMR）
+    compress: true, // 启用 gzip 压缩
+    static: './public', // 静态资源目录（如 HTML、图片等）
+    proxy:
+        [ 
+            {
+                context: ['/api', '/auth'],  // 匹配需要代理的路径（可多个）
+                target: 'http://localhost:5000',  // 后端接口地址
+                changeOrigin: true,  // 允许跨域
+                pathRewrite: { '^/api': '' }  // 重写路径（可选）
+            },
+        ],
+    client: {
+        overlay: true, // 编译错误时在浏览器全屏显示错误
+        progress: true // 在浏览器状态栏显示编译进度
+    }
+},
+```
+### 生产模式准备
+创建 config 文件夹 
+开发模式配置文件 webpack.config.dev.js
+生产模式配置文件 webpack.config.prod.js
+```
+// 配置命令
+"scripts": {
+    "start": "npm run dev",
+    "dev": "webpack server --config config/webpack.config.dev.js",
+    "build": "webpack --config config/webpack.config.dev.js"
+},
+```
+
+### 将css文件单独的抽离出来
+npm install --save-dev mini-css-extract-plugin
+> 将 CSS 从 JS 文件中提取为独立 CSS 文件的插件， 解决了 CSS 内联在 JS 中的各种问题（如阻塞 JS 执行、体积过大等）。
+
+#### 好处
+- 并行加载： 浏览器可以同时加载 HTML、JS 和 CSS 文件（多线程并行请求），而不是等待 JS 加载完成后再动态插入 CSS（style-loader 的方式）。
+- 减少阻塞：CSS 独立加载时，不会阻塞 JS 执行；而内联在 JS 中的 CSS 需等待 JS 解析后才会生效，可能导致页面 “闪屏”（先显示无样式内容，再加载样式）。
+- CSS 单独缓存： 通过 [contenthash] 配置（如 style.[contenthash].css），当 CSS 内容不变时，哈希值不变，浏览器会长期缓存
+- 减小 JS 文件体积： 大型项目中，CSS 代码可能占据大量体积。提取为独立文件后，JS 包体积显著减小，加快 JS 下载和解析速度，提升首屏渲染效率。
+- 支持 CSS 预加载：  独立的 CSS 文件可以通过 <link rel="preload"> 
+
+生产环境：强烈推荐使用 mini-css-extract-plugin: CSS 与 JS 分离，并行加载，提升页面性能, 支持 CSS 单独缓存（通过 contenthash）
+开发环境：建议继续使用 style-loader: 支持热模块替换（HMR），修改 CSS 后无需刷新页面即可生效；
+
+```
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+在处理css 文件和scss 文件时不能用style-loader 改成 MiniCssExtractPlugin.loader
+{
+    test: /\.css$/i,
+    use: [MiniCssExtractPlugin.loader, 'css-loader'],
+},
+{
+    test: /\.s[ac]ss$/i,
+    use: [MiniCssExtractPlugin.loader, 'css-loader', "sass-loader"],
+},
+new MiniCssExtractPlugin({
+    // 输出的 CSS 文件名（支持 [name]、[contenthash] 等占位符）
+    filename: 'css/[name].[contenthash].css',
+    // 非入口的 chunk 对应的 CSS 文件名（如代码分割产生的 CSS）
+    chunkFilename: 'css/[name].[contenthash].chunk.css'
+})
+
+```
+
+
+
+
+
 
 
 

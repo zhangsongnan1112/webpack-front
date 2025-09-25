@@ -7,7 +7,7 @@ sayHello()
 const sum = (a, b) => {
     return a + b
 }
-sum(1,2)
+console.log(sum(1, 3), 'sum(1,3)sum(1,3)sum(1,3)')
 
 // const getData = async  () => {
 //     const res = await fetch('/list')
