@@ -1,0 +1,12 @@
+
+.box {
+    border: 1px solid rosybrown;
+    width: 100px;
+    height: 100px;
+    background-image: url(../img/ke.png);
+    background-size: cover;
+}
+
+.box.red {
+    background-color: bisque;
+}
