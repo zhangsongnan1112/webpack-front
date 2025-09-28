@@ -5,6 +5,11 @@ import './sass/index.sass'
 
 
 
+document.getElementById('btn').onclick = function () {
+    import(/* webpackChunkName: 'sum'*/'./js/sum.js').then(res => {
+        console.log(res.sum(1, 2), '动态引入')
+    })
+}
 // document.addEventListener('DOMContentLoaded', () => {
 //     const textEl = document.getElementById('textContent');
 //     const btnEl = document.getElementById('toggleBtn');

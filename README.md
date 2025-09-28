@@ -269,6 +269,359 @@ new MiniCssExtractPlugin({
 
 ```
 
+### CSS 兼容性
+npm install --save-dev postcss-loader postcss postcss-preset-env
+```
+// css-loader 之后 sass-loader 之前
+{
+    test: /\.s[ac]ss$/i,
+    use: [MiniCssExtractPlugin.loader, 
+        'css-loader', 
+        {
+            loader: 'postcss-loader',
+            options: {
+                postcssOptions: {
+                    plugins: [
+                        [
+                            'postcss-preset-env',
+                            {
+                                // 其他选项
+                            },
+                        ],
+                    ],
+                },
+            }
+        },
+        "sass-loader"],
+},
+package.json 增加
+"browserslist": [
+    "last 2 versions",
+    "> 1%",
+    "not dead"
+]
+```
+
+### 封装样式Loader函数
+```
+const getLoader = (loader) => {
+    return [
+        MiniCssExtractPlugin.loader,
+        'css-loader',
+        {
+            loader: 'postcss-loader',
+            options: {
+                postcssOptions: {
+                    plugins: [
+                        [
+                            'postcss-preset-env',
+                            {
+                                // 其他选项
+                            },
+                        ],
+                    ],
+                },
+            }
+        },
+        loader
+    ].filter(Boolean)
+}
+ module: {
+    rules: [
+        {
+            test: /\.css$/i,
+            use: getLoader()
+        },
+        {
+            test: /\.s[ac]ss$/i,
+            use: getLoader('sass-loader')
+        },
+    ]
+ }
+
+```
+
+### css的简单压缩
+html和js 在mode === production 会自动被压缩不需要额外配置
+```
+npm install css-minimizer-webpack-plugin --save-dev
+plugins:[
+    new CssMinimizerPlugin()
+]
+```
+### sourceMap
+sourceMap（源代码映射）是一种将打包 / 压缩后的代码映射回原始源代码的技术，主要用于开发和调试阶段。能帮助开发者在调试时看到原始的、未处理的代码，极大提升调试效率。
+
+```
+// webpack.dev.js
+module.exports = {
+  mode: 'development',
+  devtool: 'eval-cheap-module-source-map', // 开发环境推荐
+};
+// webpack.prod.js
+module.exports = {
+  mode: 'production',
+  devtool: 'source-map', // 生成完整 sourceMap（可选）
+};
+```    
+### HMR （Hot Module Replacement，模块热替换）
+是 Webpack 提供的一项开发环境优化功能，它允许在不刷新整个页面的情况下，替换、添加或删除模块，同时保留应用的当前状态（如表单输入、组件状态等），极大提升开发效率。
+```
+devServer: {
+    hot: true, // 开启 HMR
+    open: true, // 自动打开浏览器
+    port: 3000
+},
+```
+#### 工作原理
+建立连接：webpack-dev-server 启动后，会与浏览器建立 WebSocket 连接，实时通信。
+监听变化：Webpack 监听源代码文件，当文件修改时，重新编译修改的模块。
+发送更新：通过 WebSocket 向浏览器发送 “更新通知” 和 “新模块代码”。
+替换模块：浏览器接收新模块，在运行时替换旧模块，同时触发应用的重新渲染（但不刷新页面）。
+
+### oneOf
+> oneOf 是 module.rules 中的一个特殊配置项，用于优化模块匹配效率，确保一个文件只会被第一个匹配成功的 loader 规则处理，而不会继续检查后续规则。
+
+为什么需要 oneOf？
+- webpack 默认会遍历所有 module.rules 规则，对每个文件进行匹配检查（即使已经找到匹配的规则）。这在规则较多时会降低构建速度。
+- oneOf 可以解决这个问题：它内部的规则是 “互斥” 的，文件一旦匹配到 oneOf 中的某条规则，就会停止检查后续规则，从而减少不必要的匹配次数，提升构建性能。
+```
+module: {
+    rules: [
+        {
+            oneOf: [
+                // 规则
+            ]
+        }
+    ]
+}
+```
+
+### include 和 exclude
+module.rules 配置中，include 和 exclude 用于指定哪些文件需要被 loader 处理，或哪些文件需要被排除，通过精确控制处理范围来提升构建效率。
+- include：仅处理符合条件的文件（白名单）
+- exclude：排除符合条件的文件，不进行处理（黑名单）。  
+值的说明：
+可以是正则表达式（如 /node_modules/）
+可以是绝对路径（如 path.resolve(__dirname, 'src')）
+可以是数组（多个条件，如 include: [path1, path2]）
+```
+ rules: [
+    {
+    test: /\.js$/, 
+    use: 'babel-loader', // 用 babel-loader 处理
+    // 仅处理 src 目录下的 JS 文件（白名单）
+    include: path.resolve(__dirname, '../src'),
+    // 排除 node_modules 目录（黑名单，优先级低于 include）
+    exclude: /node_modules/
+    }
+]
+```
+### 多进程打包 
+webpack中 多进程大包是指并行处理构建任务，如代码转换、压缩等）来提升打包速度，
+thread-loader 可以加速 loader 处理.是 Webpack 官方推荐的多进程工具，用于将耗时的 loader 任务（如 babel-loader、ts-loader）分配到 worker 进程中并行处理，避免
+npm install thread-loader --save-dev
+```
+const os = require('os')
+const cpuLen = os.cpus().length  //  获取cpu核数
+{
+test: /\.js$/,
+// 排除检查项
+exclude: /(node_modules)/,
+use: [
+    {
+        loader: 'thread-loader',
+        options: {
+            workers: cpuLen -1
+        }
+    },
+    {
+        loader: 'babel-loader',
+        options: {
+            cacheDirectory: true,
+        }
+    },
+],
+include: path.resolve(__dirname, '../src'),
+},
+```
+eslint 配置多线程
+```
+ new ESLintPlugin({
+    context: './src',
+    threads: cpuLen // 开启多进程
+}),
+```
+js 压缩配置多线程
+```
+const TerserPlugin = require('terser-webpack-plugin');
+
+ // 优化相关的
+optimization: {
+    minimizer: [
+        new CssMinimizerPlugin(),
+        new TerserPlugin(
+            {
+                parallel: cpuLen - 1
+            }
+        )
+    ]
+},
+```
+
+### TreeShaking 摇树 减少打包体积
+Webpack 已默认集成这些配置（包括 terser-webpack-plugin），因此 Tree Shaking 会自动生效
+
+treeShaking 两个核心的步骤： 
+1. 标记未使用的代码： 依赖 ES6 模块的静态分析， 当mode: 'production'，Webpack 会分析代码，标记出未被使用的代码。
+2. 删除未使用的代码：由 terser-webpack-plugin 完成。它会读取 Webpack 标记的未使用代码，在压缩过程中将其彻底删除
+
+### 减少babel的打包体积
+Babel 转换语法时会生成大量辅助函数（如 _createClass、_extends），默认会在每个文件中重复注入，导致代码冗余。babel-plugin-transform-runtime 可将这些辅助函数提取到单独的模块中复用。
+npm install @babel/plugin-transform-runtime --save-dev
+```
+module.exports = {
+    presets: ['@babel/preset-env'],
+    plugins: [
+        [
+            '@babel/plugin-transform-runtime',
+        ]
+    ]
+}
+```
+
+### 图片的压缩
+```
+npm install image-minimizer-webpack-plugin --save-dev
+npm install imagemin-gifsicle imagemin-jpegtran imagemin-optipng imagemin-svgo --save-dev
+npm install imagemin-gifsicle imagemin-mozjpeg imagemin-pngquant imagemin-svgo --save-dev
+下载的时候可能有版本冲突 最终的下载版本 成功了 
+"image-minimizer-webpack-plugin": "^4.0.0", // 需要4.0.0 这个版本以上就会和imagemin冲突
+"imagemin": "^8.0.1",
+"imagemin-gifsicle": "^7.0.0",
+"imagemin-jpegtran": "^7.0.0",
+"imagemin-mozjpeg": "^10.0.0",
+"imagemin-optipng": "^8.0.0",
+"imagemin-pngquant": "^10.0.0",
+"imagemin-svgo": "^10.0.1",
+```
+```
+ new ImageMinimizerPlugin({
+    minimizer: {
+        implementation: ImageMinimizerPlugin.imageminMinify,
+        options: {
+            plugins: [
+                ['gifsicle', { interlaced: true }],
+                ['jpegtran', { progressive: true }],
+                ['optipng', { optimizationLevel: 5 }],
+                [
+                    'svgo',
+                    {
+                        plugins: [
+                            {
+                                name: 'preset-default',
+                                params: {
+                                    overrides: {
+                                        removeViewBox: false,
+                                    },
+                                },
+                            },
+                            {
+                                name: 'addAttributesToSVGElement',
+                                params: {
+                                    attributes: [{ xmlns: 'http://www.w3.org/2000/svg' }],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            ],
+        },
+    },
+}),
+```
+
+### codeSplit 代码分割
+
+SplitChunksPlugin 是 Webpack 内置的代码分割插件（无需额外安装），主要用于自动识别并提取项目中的公共代码、第三方库等，避免重复打包，从而减小整体 bundle 体积，提升加载性能。它是实现代码分割（Code Splitting）的核心工具之一
+
+SplitChunksPlugin 的作用就是将这些重复的代码提取为单独的 chunk（文件），让所有依赖它的模块共享这一个文件，避免冗余。
+```
+// Webpack 4+ 已默认启用 SplitChunksPlugin，并提供了一套合理的默认配置
+module.exports = {
+  optimization: {
+    splitChunks: {
+      chunks: 'async', // 默认只处理异步 chunk（动态导入的模块）
+      minSize: 20000, // 最小体积（字节）：只有大于这个值的 chunk 才会被分割
+      minRemainingSize: 0,
+      minChunks: 1, // 最少被引用次数：只有被至少 1 个模块引用才会被分割
+      maxAsyncRequests: 30, // 异步加载时的最大并行请求数
+      maxInitialRequests: 30, // 初始加载时的最大并行请求数
+      enforceSizeThreshold: 50000,
+      cacheGroups: { // 缓存组：用于自定义分割规则（核心）
+        defaultVendors: { // 提取第三方库（如 node_modules 中的依赖）
+          test: /[\\/]node_modules[\\/]/, // 匹配 node_modules 目录
+          priority: -10, // 优先级（数值越大越优先）
+          reuseExistingChunk: true, // 如果已存在相同的 chunk，直接复用
+        },
+        default: { // 提取业务代码中的共享模块
+          minChunks: 2, // 最少被 2 个模块引用
+          priority: -20,
+          reuseExistingChunk: true,
+        },
+      },
+    },
+  },
+};
+```
+```
+const path = require('path')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+module.exports = {
+    entry: {
+        main: './src/main.js',
+        add: './src/add.js'
+    },
+    output: {
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'js/[name].js',
+        chunkFilename: 'js/[name].chunk.js',
+        clean: true
+    },
+    plugins: [
+        new HtmlWebpackPlugin({
+            template: path.resolve(__dirname, './public/index.html'),
+        })
+    ],
+    optimization: {
+        splitChunks: {
+            chunks: 'all', 
+            minSize: 0
+        }
+    },
+    mode: 'production'
+}
+```
+####  codeSplit 代码分割
+
+import 动态导入会自动的拆分为chunk 包
+```
+const btn = document.getElementById('btn')
+btn.addEventListener('click', () => {
+    // 配置chunk name
+    import(/* webpackChunkName: "math" */'./math.js').then(res => {
+        console.log(res, res.mathMin(1,4,0))
+    })
+})
+```
+
+
+
+
+
+
+
 
 
 

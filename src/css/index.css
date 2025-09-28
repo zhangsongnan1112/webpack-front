@@ -1,5 +1,7 @@
 
 .box {
+    display: flex;
+    backdrop-filter: blur(5px);
     border: 1px solid rosybrown;
     width: 200px;
     height: 200px;
