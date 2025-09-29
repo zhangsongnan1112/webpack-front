@@ -1,3 +1,4 @@
 node_modules/
 dist
-config/.dev-cache/
+config/.dev-cache/default-development/
+config/.dev-cache/default-production/
