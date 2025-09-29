@@ -16,7 +16,7 @@ const getLoader = (loader) => {
         MiniCssExtractPlugin.loader,
         'css-loader',
         {
-            loader: 'postcss-loader',
+            loader: 'postcss-loader', // 处理css 样式的兼容性
             options: {
                 postcssOptions: {
                     plugins: [
@@ -102,6 +102,7 @@ module.exports = {
     plugins: [
         new ESLintPlugin({
             context: './src',
+            cache: true,
             threads: cpuLen // 开启多进程
         }),
         new HtmlWebpackPlugin(
