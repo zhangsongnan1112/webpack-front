@@ -13,6 +13,7 @@ module.exports = {
         path: path.resolve(__dirname, '../dist'),
         // 入口文件输出的文件名
         filename: 'js/main.js',
+        chunkFilename: 'js/[name].chunk.js',
     },
     module: {
         rules: [

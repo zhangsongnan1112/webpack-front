@@ -6,6 +6,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin');
+const PreloadWebpackPlugin = require('@vue/preload-webpack-plugin');
 
 
 const cpuLen = os.cpus().length  //  获取cpu核数
@@ -40,9 +41,9 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, '../dist'),
         // 入口文件输出的文件名
-        filename: 'js/[name].js',
+        filename: 'js/[name].[contenthash:6].js',
         // 输出的chunk文件的名字
-        chunkFilename: 'js/[name].chunk.js',
+        chunkFilename: 'js/[name].[contenthash:6].chunk.js',
         clean: true
     },
     module: {
@@ -66,7 +67,7 @@ module.exports = {
                             }
                         },
                         generator: {
-                            filename: 'images/[name].[hash:6][ext]'
+                            filename: 'images/[name].[hash:6][ext][query]'
                         }
                     },
                     {
@@ -89,13 +90,9 @@ module.exports = {
                                 loader: 'babel-loader',
                                 options: {
                                     cacheDirectory: true,  // 缓存
-                                    // plugins: [
-                                    //     '@babel/plugin-transform-runtime',
-                                    // ]
                                 }
                             },
                         ],
-
                         include: path.resolve(__dirname, '../src'),
                     },
                 ]
@@ -124,24 +121,29 @@ module.exports = {
         ),
         new MiniCssExtractPlugin({
             // 输出的 CSS 文件名（支持 [name]、[contenthash] 等占位符）
-            filename: 'css/[name].[contenthash].css',
+            filename: 'css/[name].[contenthash:6].css',
             // 非入口的 chunk 对应的 CSS 文件名（如代码分割产生的 CSS）
-            chunkFilename: 'css/[name].[contenthash].chunk.css'
+            chunkFilename: 'css/[name].[contenthash:6].chunk.css'
         }),
-        // new CssMinimizerPlugin(),
-        // new TerserPlugin(
-        //     {
-        //         parallel: cpuLen - 1
-        //     }
-        // )
+        new PreloadWebpackPlugin({
+            rel: 'preload',
+            as: 'script',
+        })
     ],
     // 优化相关的plugin
     optimization: {
+        splitChunks: {
+            chunks: 'all',
+            minSize: 0
+        },
+        runtimeChunk: {
+            name: 'runtime', 
+        },
         minimizer: [
             new CssMinimizerPlugin(),
             new TerserPlugin(
                 {
-                    parallel: cpuLen - 1
+                    parallel: cpuLen - 1 // 开启多线程
                 }
             ),
             new ImageMinimizerPlugin({

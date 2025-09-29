@@ -616,10 +616,70 @@ btn.addEventListener('click', () => {
 })
 ```
 
+### preload prefetch 预先加载资源
+在 Webpack 项目中使用 Preload，主要目的是让浏览器尽早加载关键资源。这通常通过 HTML 的 <link rel="preload"> 标签实现
+Preload：用于当前页面即将使用的高优先级关键资源（如关键CSS/JS字体），浏览器会立即加载。
+Prefetch：用于未来可能使用的资源（如下一页面的脚本），浏览器在空闲时加载。Preload 的加载优先级通常高于 Prefetch。
 
+```
+npm install @vue/preload-webpack-plugin -D
+new PreloadWebpackPlugin({
+    rel: 'preload',
+    as: 'script',
+    // 其他配置选项...
+})
+```
+```
+动态导入的时候 
+webpackPreload: true 会告诉 Webpack 这个动态引入的 chunk 需要被预加载， 使用魔法注释时，不需要额外的插件，Webpack 会自动处理 <link> 标签的注入
+ const detailModule = await import(
+    /* webpackChunkName: "detail" */
+    /* webpackPreload: true */
+    './js/sum.js'
+);
+```
 
+###  优化缓存（避免依赖变化影响主文件的 contenthash）
+```
+optimization: {
+    // 你的现有配置：对所有 chunk 进行分割，无最小体积限制
+    splitChunks: {
+      chunks: 'all', // 作用于同步和异步 chunk
+      minSize: 0, // 取消最小体积限制，即使 1KB 的模块也可能被分割
+    },
+    // 新增：分离 runtime 代码（关键配置）
+    runtimeChunk: {
+      name: 'runtime', // 将运行时代码单独打包为 runtime.[contenthash].js
+    },
+    // 可选：稳定模块 ID，避免依赖顺序变化导致哈希波动
+    moduleIds: 'deterministic',
+  },
+```
 
+### core-js  
+> 专门为ES6以及以上的API的ployfill(垫片/布丁)
+babel 对js代码进行了兼容性处理， 其中使用 @babel/preset-env 智能预设处理兼容性问题的
+它能够将ES6的一些语法进行编译处理，比如箭头函数、扩展运算符，但是如果是async函数、promise函数，数组的inclueds、 Object.assign等，它没法处理。低版本浏览器会直接报错
 
+yarn add core-js
+
+三种引入方法
+1. 全局引入  import 'core-js'; （在main.js中） 体积大
+2. 按需引入  import 'core-js/features/promise'; 代码量多
+3. 配置Babel 自动引入
+```
+presets: [
+    [
+        '@babel/preset-env',  // preset 名称
+        {                     // 该 preset 的选项
+            useBuiltIns: "usage",
+            corejs: 3,
+            // 新增：强制所有 ES6+ 特性转译为 ES5，忽略浏览器是否支持
+            forceAllTransforms: true,  // 如果用的是chrome它默认支持es6 的语法 他就不会进行转换，不管支持不支持全部转换
+        }
+    ]
+] ,
+```
 
 
 

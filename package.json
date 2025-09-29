@@ -15,6 +15,7 @@
     "@babel/core": "^7.28.4",
     "@babel/plugin-transform-runtime": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
+    "@vue/preload-webpack-plugin": "^2.0.0",
     "babel-loader": "^10.0.0",
     "css-loader": "^7.1.2",
     "css-minimizer-webpack-plugin": "^7.0.2",
@@ -44,6 +45,10 @@
   "browserslist": [
     "last 2 versions",
     "> 1%",
-    "not dead"
-  ]
+    "not dead",
+    "ie 11"
+  ],
+  "dependencies": {
+    "core-js": "3"
+  }
 }

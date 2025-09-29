@@ -1,3 +1,3 @@
-export   function sum (a,b) {
-    return a+b
+export   function sum (...arg) {
+    return arg.reduce((a,b) =>  a + b , 0)
 }
