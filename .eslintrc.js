@@ -1,7 +1,7 @@
 module.exports = {
     env: {
-        browser: true,  // 表示代码运行在浏览器环境
-        es2021: true    // 表示代码使用 ES2021 及以下版本的语法特性
+        browser: true,  //  支持浏览器环境全局变量（如 window、document）
+        es2021: true    //  支持 ES2021 及以下版本的语法特性
     },
     parserOptions: {
         ecmaVersion: "2021",  // 指定支持的 ECMAScript 语法版本

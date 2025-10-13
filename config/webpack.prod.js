@@ -14,7 +14,16 @@ const cpuLen = os.cpus().length  //  获取cpu核数
 const getLoader = (loader) => {
     return [
         MiniCssExtractPlugin.loader,
-        'css-loader',
+        {
+            loader: 'css-loader',
+            // options: {
+            //     modules: {
+            //         mode: 'local', // 正确：CSS modules 的模式配置
+            //         localIdentName: '[path][name]__[local]--[hash:base64:5]' // 正确：哈希规则
+            //     },
+            //     importLoaders: loader ? 2 : 1 // 代表在 css-loader 之前还有几个 loader
+            // }
+        },
         {
             loader: 'postcss-loader', // 处理css 样式的兼容性
             options: {
@@ -102,6 +111,10 @@ module.exports = {
     plugins: [
         new ESLintPlugin({
             context: './src',
+            failOnError: process.env.NODE_ENV === 'production',
+            // 是否在控制台输出检查结果
+            emitError: true,
+            emitWarning: true,
             cache: true,
             threads: cpuLen // 开启多进程
         }),
@@ -138,7 +151,7 @@ module.exports = {
             minSize: 0
         },
         runtimeChunk: {
-            name: 'runtime', 
+            name: 'runtime', // 将运行时代码单独打包为 runtime.[contenthash].js
         },
         minimizer: [
             new CssMinimizerPlugin(),
@@ -190,3 +203,4 @@ module.exports = {
         buildDependencies: { config: [__filename] } // 配置变化时缓存失效
     }
 }
+

@@ -236,10 +236,10 @@ devServer: {
 ```
 
 ### 将css文件单独的抽离出来
-npm install --save-dev mini-css-extract-plugin
-> 将 CSS 从 JS 文件中提取为独立 CSS 文件的插件， 解决了 CSS 内联在 JS 中的各种问题（如阻塞 JS 执行、体积过大等）。
+npm install --save-dev mini-css-extract-plugin 提取 CSS 代码到单独文件的插件
+> 它的核心作用是将原本被打包到 JavaScript 中的 CSS 代码抽离出来，生成独立的 .css 文件（如 styles.css），而不是像 style-loader 那样通过 <style> 标签动态注入到 DOM 中。
 
-#### 好处
+##### 好处
 - 并行加载： 浏览器可以同时加载 HTML、JS 和 CSS 文件（多线程并行请求），而不是等待 JS 加载完成后再动态插入 CSS（style-loader 的方式）。
 - 减少阻塞：CSS 独立加载时，不会阻塞 JS 执行；而内联在 JS 中的 CSS 需等待 JS 解析后才会生效，可能导致页面 “闪屏”（先显示无样式内容，再加载样式）。
 - CSS 单独缓存： 通过 [contenthash] 配置（如 style.[contenthash].css），当 CSS 内容不变时，哈希值不变，浏览器会长期缓存
