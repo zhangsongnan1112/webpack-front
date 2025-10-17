@@ -97,9 +97,57 @@
                     btnEl.textContent = '展开';
                 }
             });
+
+            const channel = new BroadcastChannel('my-channel');
+            document.getElementById('btn').onclick = function () {
+                console.log(111111)
+                channel.postMessage({
+                    type: 'notice',
+                    content: '新消息通知',
+                    time: new Date().toLocaleTimeString()
+                })
+            }
+
+
+            channel.onmessage = (event) => {
+                if (event.data.type === 'notice') {
+                    alert(`通知：${event.data.content}`);
+                }
+            };
+            window.addEventListener('beforeunload', () => {
+                channel.close();
+            });
+
+            function arrSet(arr) {
+                const resultSet = new Set()
+                const objSet = new Set()
+
+                for (let i = 0; i < arr.length; i++) {
+                    const item = arr[i]
+                    if (item === null || typeof item !== 'object') {
+                        resultSet.add(item)
+                    } else {
+                        let key = null
+                        try {
+                            key = JSON.stringify(item)
+                        } catch {
+                            key = item
+                        }
+                        if (!objSet.has(key)) {
+                            objSet.add(key)
+                            resultSet.add(item)
+                        }
+
+                    }
+                }
+                return [...resultSet]
+
+            }
+            console.log(arrSet(NaN, NaN, [1, 2], [1, 2], 1, null))
+
         });
 
-
+        
     </script>
 </body>
 
