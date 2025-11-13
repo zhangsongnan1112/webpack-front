@@ -1,8 +1,10 @@
 import React , {Suspense, lazy} from 'react';
 import { Routes, Route, Link } from 'react-router-dom'
+import routers from './router';
 
-const Home =  lazy(() => import('./pages/home'))
-const About = lazy(() => import('./pages/about'))
+// const Home =  lazy(() => import('./pages/home'))
+// const About = lazy(() => import('./pages/about'))
+console.log(routers, 1)
 
 const APP = () => {
     return   (
@@ -19,8 +21,13 @@ const APP = () => {
 
             <Suspense fallback={<div>loading.....</div>}>
                 <Routes>
-                    <Route path="/home" element={<Home />}></Route>
-                    <Route path="/about" element={<About />}></Route>
+                    {routers.map(router => (
+                        <Route
+                            key={router.path}  // 必须添加 key，避免 React 列表渲染警告
+                            path={router.path}
+                            element={<router.component />}
+                        />
+                    ))}
                 </Routes>
             </Suspense>
         
