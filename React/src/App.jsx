@@ -5,7 +5,6 @@ import routers from './router';
 // const Home =  lazy(() => import('./pages/home'))
 // const About = lazy(() => import('./pages/about'))
 console.log(routers, 1)
-
 const APP = () => {
     return   (
         <div>

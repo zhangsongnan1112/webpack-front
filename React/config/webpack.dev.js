@@ -1,6 +1,6 @@
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-
+//  做react热更新的 
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const path = require('path')
 
@@ -86,7 +86,6 @@ module.exports = {
         }
     },
     devServer: {
-        port: 3000, // 端口号（默认 8080）
         open: true, // 启动后自动打开浏览器
         hot: true, // 启用模块热替换（HMR）
     },

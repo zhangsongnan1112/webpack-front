@@ -3,7 +3,11 @@ import './index.scss'
 
 const APP = () => {
     return (
-        <h1 className="hot">Home~~</h1>
+        <div>
+            <h1 className="hot">Home~~</h1>
+            <img className="imgname" src={require('../assets/1.png')} ></img>
+        </div>
+       
     )
 }
 
