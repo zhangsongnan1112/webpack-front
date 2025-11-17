@@ -10,7 +10,8 @@ const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 // 压缩图片 
 const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin');
-
+// 复制pubilc 文件夹
+const CopyPlugin = require('copy-webpack-plugin');
 
 
 module.exports = {
@@ -87,7 +88,18 @@ module.exports = {
                 filename: 'static/css/[name][chunkhash:6].css',
                 chunkFilename: 'static/css/[name][chunkhash:6].chunk.css',
             }
-        )
+        ),
+        new CopyPlugin({
+            patterns: [
+               {
+                    from: path.resolve(__dirname, '../public'),
+                    to: path.resolve(__dirname, '../dist'),
+                    globOptions: {
+                        ignore: ['**/index.html'], // 忽略 public 目录下的 index.html（避免覆盖 HtmlWebpackPlugin 生成的 HTML）
+                    },
+               }
+            ],
+        })
     ],
     resolve: {
         extensions: ['.jsx', '.js', '.json'] // 按优先级解析后缀

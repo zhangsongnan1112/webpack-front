@@ -86,6 +86,12 @@ module.exports = {
         }
     },
     devServer: {
+        static: [
+            {
+                directory: path.resolve(__dirname, '../public'), // 指向 public 目录
+                publicPath: '/', // 访问路径（根路径）
+            },
+        ],
         open: true, // 启动后自动打开浏览器
         hot: true, // 启用模块热替换（HMR）
     },
