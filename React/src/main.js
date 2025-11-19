@@ -2,12 +2,24 @@ import React from 'react';
 import { HashRouter } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+// import { init } from '@rematch/core';
+import { Provider } from 'react-redux';
+// import models  from  './store'
+import reduxStore from './reduxStore'
+
+
+// const store = init({
+//     models,
+// });
+
 
 
 const rootElement = document.getElementById('app') 
 const root = createRoot(rootElement);
 root.render(
     <HashRouter>
-        <App />
+        <Provider store={reduxStore}>
+            <App />
+        </Provider>
     </HashRouter>,
 );
