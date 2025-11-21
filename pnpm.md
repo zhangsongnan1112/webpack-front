@@ -1,0 +1,10 @@
+项目经验：跨部门项目 Monorepo 架构迁移与工程化落地技术栈：Monorepo(pnpm workspace)、React 18、React Router v6、Redux Rematch、TypeScript项目背景：原项目归属其他部门维护，本部门无法进行统一项目管控机制（缺乏 PR/CR 流程、代码规范不统一），且公共逻辑复用困难，跨应用协作效率低下，需通过架构升级与规范搭建解决管理与技术双重痛点
+架构与依赖升级：主导迁移至 pnpm workspace Monorepo 架构，同步推进核心依赖跨版本升级（React 16→18、React Router v5→v6）。针对 Router v6 的 hooks 化改造，系统替换旧有路由逻辑：用 useNavigate 替代传统 history.push/replace 重构 10+ 处编程式导航，解决路由跳转参数传递方式的兼容性问题
+状态层重构：基于 Rematch 常规使用，同步调整状态注册方式，用 addModel 方法替代旧的 model 注册方式，确保与整体依赖升级后的项目环境兼容，维持原有状态管理逻辑稳定运行
+项目工程化配置，优化 TypeScript 工程配置：调整 tsconfig.json，配置 baseUrl 与 paths 解决 @utils 等别名引用问题，设置 typeRoots 与 include 字段实现根目录 types 类型自动识别，消除编译报错，提升团队开发效率，保障类型系统稳定
+
+公共能力沉淀: 基于 Monorepo 架构拆分@common/components @common/utils等共享包，提取跨应用复用逻辑（ Rematch 动态注册 models、 公共方法等），通过 pnpm workspace 实现版本统一管理，业务包直接通过包名引入，减少代码冗余量，提升团队协作效率平滑过渡：设计 "统一入口 + 灰度路由" 方案实现无感知迁移 —— 建全局入口页作为所有业务的访问起点，整合原 shell 层菜单逻辑。通过封装的灰度判断服务，自动决策跳转至旧版本应用或新版本 Monorepo 应用 URL；同时支持通过 URL 参数（如?gray=1）手动切换版本，供测试验证。最终实现用户无感知切换，业务零中断。TypeScript：系统学习了类型定义、接口、泛型、等核心特性
+Rematch：动态添加 model  的 state、reducers、effects 设计模式 （redux 和 rematch 的区别
+Webpack：熟悉配置入口、出口、loader 和插件的使用，代码分割、热更新等原理，
+Vite：
+Monorepo 项目迁移：实践了基于 pnpm workspace 的多包管理架构，学习了如何划分包结构、配置跨包依赖与类型共享，完成了从单包项目到多包协同开发的迁移落地。

@@ -1,6 +1,6 @@
 1. element.getBoundingClientRect() 获取元素位置信息
 2. IntersectionObserver() 异步监听元素与视口 / 根元素的交叉状态
-3. document.addEventListener('DOMContentLoaded', callback)DOM 树构建完成后触发
+3. document.addEventListener('DOMContentLoaded', callback)DOM树构建完成后触发同步脚本和defer脚本执行完成后触发
 4. window.addEventListener('unhandledrejection', callback) 捕获未处理的 Promise reject
 5. window.addEventListener('error', (e) => { ... })，捕获 JS 语法 / 运行时错误、资源加载错误。
 6. requestAnimationFrame（callback） 与浏览器刷新同步，下一次重绘前执行回调”，避免布局抖动
@@ -94,3 +94,22 @@ Vue 的数据更新是异步批量处理的：
 4. 错误捕获阶段
 - state getDerivedStateFromError()
 - componentDidCatch  用于捕获错误
+
+### js 放在<head> 标签 和 </body> 前有什么区别
+1. 加载时机不同 head中会阻塞html解析，body中不会阻塞html解析（因为后面没内容了）
+2. head中无法获取DOM找不到Dom, body中可以安全的操作dom 
+3. 会出现页面白屏直到脚本加载完成， </body> 可以很快的看见页面
+
+### async defer 区别
+-  <script src="app.js" defer></script> 异步下载 延迟执行， 不阻塞html解析， Dom已经ready 保持脚本顺序， 多个 defer 脚本会按照它们在 HTML 中的顺序执行
+- <script src="app.js" async></script> 异步下载 下载完就执行 可能会阻塞html解析 执行阶段会阻塞解析, 不保证顺序，多个 async 脚本谁先下载完谁先执行，Dom可能没就绪
+
+
+### 白屏 如何排查
+- 资源加载失败（html/js/css）、
+- 页面是否报错
+- Network 查看资源 是否404/ 500  接口是否报错
+- 控制台是否有代码报错
+- DOM 是否有渲染，HTML加载不完整，JS未正确渲染内容
+- 查看performance 是否有大量任务 阻塞了页面的渲染
+- 其他用户 其他浏览器兼容性
