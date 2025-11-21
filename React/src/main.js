@@ -12,7 +12,9 @@ import reduxStore from './reduxStore'
 //     models,
 // });
 
-
+window.addEventListener('error', (error) => { 
+    console.log('error', error)
+ })
 
 const rootElement = document.getElementById('app') 
 const root = createRoot(rootElement);

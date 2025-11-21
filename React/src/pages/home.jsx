@@ -5,6 +5,7 @@ import { Button } from 'antd';
 
 
 const APP = () => {
+    // https://api.cursor.sh/ping
     const count = useSelector((state) => state.count.count)
     const dispatch = useDispatch();
 
