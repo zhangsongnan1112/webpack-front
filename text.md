@@ -26,7 +26,7 @@
     ```
 3. document.addEventListener('DOMContentLoaded', callback)
     HTML 文档已完全解析完成（DOM 树构建完毕）
-    所有同步脚本（阻塞型 <script>）已下载并执行完毕
+    所有同步脚本（阻塞型 script）已下载并执行完毕
     所有 defer 脚本已下载并执行完毕
     不会等待 async 脚本、图片、CSS（某些情况除外）、iframe 等资源
 4. window.addEventListener('unhandledrejection', callback) 捕获未处理的 Promise reject
@@ -89,9 +89,20 @@ function myStringify(params, stack = []) {
 
 ```
 
-### React fiber 解决了什么问题
-在 React 15 及之前，组件的更新（如 setState）会触发递归遍历整个虚拟 DOM 树，这个过程是同步且不可中断的。Fiber 核心目标是：将渲染/更新过程拆分为可中断、可恢复的小任务，并根据优先级调度执行。
-Fiber” 既指一种数据结构（每个 React 元素对应一个 Fiber 节点），也指整个增量渲染架构。
+
+### fiber
+fiber是用来实现增量渲染的 react 15以前是递归的去构建虚拟DOM和diff算法，这个过程呢是不可以去中断的，如果组件树很大很复杂，就会导致主线程被占用很长时间，造成页面的卡顿和白屏 会影响用户体验，fiber框架 将我们整个渲染过拆分可以中断 可恢复的任务单元，可以利用浏览器的空闲时间 去逐步完成更新。fiber = 一个可中断的渲染任务单元（每一个元素对应一个fiber节点）fiber还引入了任务优先级 用户交互的优先级 > 数据获取 (fetch) > 过期任务 高优先级任务可以打断低优先级任务的执行 fiber的好处 可以实现更流畅的UI 更灵活的渲染控制
+
+### 为什么 react 需要fiber 而vue 不需要
+本质原因： 追踪依赖的方式不一样 
+（依赖追踪指的是：当组件使用了某些状态（state、prop））组件不知道自己用了哪些状态，不知道自己该不该更新
+react： 手动的去触发更新 ，不会去自动的追踪依赖，而是触发整颗树的渲染，即时组件的prop/state没变化 也要引起一次大规模的更新 （除非用memo/PureComponent优化）
+vue 采用的是响应式系统 + 响应的依赖追踪 组件初始化时自动的收集模版中用到的响应式数据作为依赖，只有依赖数据变化组件才会被更新，更新是精准的 局部的
+
+### react的diff 和vue的diff
+react 和 vue 都使用虚拟DOM和diff算法来高效更新真实DOM，通过diffl算法来对比新旧虚拟 DOM 树。
+React 的 diff 算法基于 “同层比较” 策略，它不会跨层级对比节点。通过 key 来判断是否为相同节点。节点类型不同会直接销毁DOM构建新的DOM树，节点类型和Key一样就会复用。
+vue 同层比较。根据key. 查找最长的递归子序列，还会标记静态节点、变量提升。
 
 ### 为什么需要 nextTick？ Vue.nextTick() 用于在下次 DOM 更新循环结束后执行回调
 Vue 的数据更新是异步批量处理的：
@@ -105,6 +116,26 @@ Vue 的数据更新是异步批量处理的：
 我们的核心价值，恰恰体现在：能够在信息模糊、目标冲突、资源受限的现实中，识别关键矛盾；将看似杂乱甚至相互抵触的诉求，提炼为清晰、可落地的问题；在技术可行性、锚定真正值得解决的问题。
 因此，技术工作的本质从来不只是编码——编码只是实现价值的手段，而非目的本身。人类更需要成为“定义者”和“决策者”
 
+### 前端如何解决页面请求接口大规模并发问题
+1. 限制并发数量 ， 避免一次性发起过多请求导致的问题
+2.控制请求频率：防抖、节流
+3.合并请求 与 缓存 静态文件强缓存 ， localStorage、sessionStorage 或 IndexedDB 缓存数据
+4.懒加载、预先加载、延期加载
+5.取消不必要请求 页面卸载取消请求 new AbortController()
+
+### vite 原理
+- 开发阶段：基于原生 ES 模块（ESM），无需打包
+    1. 利用现代浏览器对 < script type="module" > 的原生支持 , 将 CommonJS转为 ESM
+    2. 按需加载：只编译和返回当前页面实际请求的模块，启动速度极快（与项目大小无关）
+    3. 不打包（No Bundle）：跳过传统构建工具（如 Webpack）的全量打包过程
+- 生产的时候仍然需要打包 
+    1. 开发时不打包，但生产环境仍需优化 使用 Rollup 打包
+    2. 内置使用 Rollup 进行 Tree Shaking、代码分割、压缩等
+- 智能重写 import 路径
+    1. 将源码中的裸导入（如 import vue from 'vue'）动态重写为合法 URL
+    ```
+        import { createApp } from '/node_modules/.vite/deps/vue.js?v=xxx';
+    ```
 
 ### 如何保证用户的使用体验
 1. 控制页面的响应速度3s, 每增加1s 用户流失率增加7%
@@ -118,6 +149,73 @@ Vue 的数据更新是异步批量处理的：
 9. 交互反馈在毫秒级别 100毫秒
 10. 性能监控系统，埋点， 错误日志的收集
 11. 合理的loading、骨架屏、
+
+
+### 前端性能监控指标
+1. FP （First Paint，首次绘制）浏览器首次将像素渲染到屏幕的时间（白屏时间），标志页面开始加载。
+2. FCP（First Contentful Paint，首次内容绘制）首次绘制文本、图片等有意义内容的时间，比 FP 更贴近用户感知
+3. LCP（Largest Contentful Paint，最大内容绘制） 视口内最大内容元素（如图片、文本块）渲染完成的时间，核心用户体验指标（目标：< 2.5s）
+4. TTI（Time to Interactive，可交互时间）页面加载后，用户可以流畅交互（点击、输入）的时间（无长任务阻塞）。
+5. CLS（Cumulative Layout Shift，累积布局偏移）视觉稳定性：页面是否“乱跳”
+6. 资源加载时间：HTML、CSS、JS、图片、接口等的下载、解析、执行时间
+
+
+
+
+### 图片格式 png、jpg、jpeg、webp
+PNG： 无损压缩：解压后像素数据与原始完全一致，但是压缩率小。支持透明度，不支持动画。适合 logo、图标等。
+JPG / JPEG： 有损压缩：丢弃人眼不易察觉的高频信息。压缩率高，文件体积小；不支持透明度（背景必须是实色）；不支持动画；适合照片、自然图像等色彩丰富、细节多的场景
+WebP： 同时支持有损/无损 + 透明 + 动画，体积比 PNG/JPEG 小 25~35%
+
+### 白屏 如何排查
+- 资源加载失败（html/js/css）、
+- 页面是否报错
+- Network 查看资源 是否404/ 500  接口是否报错
+- 控制台是否有代码报错
+- DOM 是否有渲染，HTML加载不完整，JS未正确渲染内容
+- 查看performance 是否有大量任务 阻塞了页面的渲染
+- 其他用户 其他浏览器兼容性
+
+### http
+- http1.0 采用的是短链接（无持久链接） 一个请求需要创建和关闭链接，需要频繁的创建和关闭链接，对头阻塞严重，上一个链接未关闭 下一个链接就不能发起请求，并且只能开启一个TCP 链接，每次请求只能开一个tcp 。 个请求一个连接，串行执行，效率极低
+- http1.1 默认长链接，允许在一个tcp 链接上发送多个请求，但是仍然存在队头阻塞的问题，原因是 一个tcp 内 返回数据的顺序和发送顺序必须保持一致 ，这是队头阻塞的原因， 但是一个同一个域名可以开启6到8个TCP 
+- http2.0 采用多路复用，彻底解决的队头阻塞的问题， 一个TCP链接里面可以乱序的响应
+
+### js 放在head 标签 和 body 前有什么区别
+1. 加载时机不同 head中会阻塞html解析，body中不会阻塞html解析（因为后面没内容了）
+2. head中无法获取DOM找不到Dom, body中可以安全的操作dom 
+3. 会出现页面白屏直到脚本加载完成， 放到< /body > 可以很快的看见页面
+
+### async defer 区别
+-  < script src="app.js" defer> < /script > 异步下载 延迟执行， 不阻塞html解析， Dom已经ready 保持脚本顺序， 多个 defer 脚本会按照它们在 HTML 中的顺序执行
+- < script src="app.js" async >< /script > 异步下载 下载完就执行 可能会阻塞html解析 执行阶段会阻塞解析, 不保证顺序，多个 async 脚本谁先下载完谁先执行，Dom可能没就绪
+
+
+### 鼠标事件
+1. click      click = mousedown + mouseup（且在同一元素上）
+2. dbClick
+3. mousedown  鼠标按键按下（任意键）	 拖拽开始、自定义交互
+4. mouseup	   鼠标按键释放	拖拽结束、绘制完成
+5. mousemove	鼠标在元素内移动	鼠标轨迹、悬停提示、画板
+6. mouseenter	鼠标进入元素区域	❌ 不冒泡	显示 tooltip、高亮
+7. mouseleave	鼠标离开元素区域	❌ 不冒泡	隐藏 tooltip、取消高亮
+8. mouseover	鼠标进入元素或其子元素		较少单独使用（易误触发）
+9. mouseout	鼠标离开元素或其子元素	 较少单独使用（易误触发）
+10. contextmenu	右键点击（或键盘菜单键）自定义右键菜单
+
+
+### 哪些css属性支持transition
+1. 颜色类：color 、 background-color 、 background-color
+2. 尺寸和位置：width、 height、 top/right/bottom/left、border- width、 border-radius、padding、margin
+3. 透明度和可见性类：opacity、visibility
+4. 背景与阴影:  background-position、background-size、 box-shadow、text-shadow
+5. 变形与变化： transform ： translate、scale、rotate、skew 
+6. 字体与文本：font-size、line-height
+- 不支持的
+1. 布局类： display 、position、float、overflow
+2. 盒模型类：box-sizing、min-width/max-width/min-height/max-height：过渡效果不稳定。
+3. 文本与字体类: font-family、text-align、white-space、 cursor、background-image
+
 
 ### react生命周期
 1. 挂载阶段
@@ -137,31 +235,56 @@ Vue 的数据更新是异步批量处理的：
 - state getDerivedStateFromError()
 - componentDidCatch  用于捕获错误
 
-### js 放在<head> 标签 和 </body> 前有什么区别
-1. 加载时机不同 head中会阻塞html解析，body中不会阻塞html解析（因为后面没内容了）
-2. head中无法获取DOM找不到Dom, body中可以安全的操作dom 
-3. 会出现页面白屏直到脚本加载完成， </body> 可以很快的看见页面
 
-### async defer 区别
--  <script src="app.js" defer></script> 异步下载 延迟执行， 不阻塞html解析， Dom已经ready 保持脚本顺序， 多个 defer 脚本会按照它们在 HTML 中的顺序执行
-- <script src="app.js" async></script> 异步下载 下载完就执行 可能会阻塞html解析 执行阶段会阻塞解析, 不保证顺序，多个 async 脚本谁先下载完谁先执行，Dom可能没就绪
+### 加载css的方式
+1. 在 HTML 中使用 < link rel="stylesheet" href="./index.css" >
+    - link 并行加载css 多个link并行下载
+    - 并行下载：CSS 与 HTML 文件同时下载（不阻塞html下载）
+    - 不会阻塞Html解析，但是阻塞页面的渲染
+    - 阻塞页面渲染：Render Tree 无法构建，用
+2. 在style 或者是css 文件中 @import url('./index.css') || @import './index.css';; 会导致额外的网络请求, 浏览器解析到 @import时才会去加载对应文件
+    - 串行加载css,必须等待父css加载完在加载子css
+    - @import 不会阻塞Html解析，但是阻塞页面的渲染。但 不会阻塞 HTML 下载
+- 在 JS 中创建 标签并插入到 DOM 中，实现动态加载. 按需加载样式（如用户切换主题时）
+- import styles from './index.scss'; 将css模块转成js模块 像这种 引入的方式都是因为webpack配置了css-loader style-loader(也不能用在css文件内import是es_module 语法)
+
+### 加载js的方式
+1.  < script src="./index.js"> < /script> < script async src="script.js">< /script>下载后立即执行 < script defer src="script.js"> < /script > 下载后文档解析完在执行
+2. 动态脚本 按需引入 const script = document.createElement('script'); script.src = 'script.js'; document.head.appendChild(script);
+3. es6 export function add(a, b) {return a + b;} import { add } from './math.js'; 在 HTML 中引入主文件，需添加 type="module" < script type="module" src="main.js"></script >
+4. CommonJS  module.exports = { sum }; 或者 exports.sum = sum;  const { sum } = require('./utils.js');
+
+### 不同标签间的通讯方式
+1. url 
+2. localStorage 
+3. indexdb  (适合用于大量数据，操作繁琐些)
+4. window.open  + postMessage()
+  let channel =  window.open('#/list')
+  channel.postMessage({
+      type: 'notice',
+      content: '新消息通知',
+  })
+  window.addEventListener('message', (e) => {
+    if (e.data.type === 'notice') {
+      alert(`通知：${e.data.content}`);
+    }
+  });
+
+5. new BroadcastChannel(channelName)
+const channel = new BroadcastChannel('my-channel');
+document.getElementById('btn').onclick = function () {
+  channel.postMessage({
+      type: 'notice',
+      content: '新消息通知',
+  })
+}
+channel.onmessage = (event) => {
+  if (event.data.type === 'notice') {
+    alert(`通知：${event.data.content}`);
+  }
+};
 
 
-### 白屏 如何排查
-- 资源加载失败（html/js/css）、
-- 页面是否报错
-- Network 查看资源 是否404/ 500  接口是否报错
-- 控制台是否有代码报错
-- DOM 是否有渲染，HTML加载不完整，JS未正确渲染内容
-- 查看performance 是否有大量任务 阻塞了页面的渲染
-- 其他用户 其他浏览器兼容性
-
-### 前端如何解决页面请求接口大规模并发问题
-1. 限制并发数量 ， 避免一次性发起过多请求导致的问题
-2.控制请求频率：防抖、节流
-3.合并请求 与 缓存 静态文件强缓存 ， localStorage、sessionStorage 或 IndexedDB 缓存数据
-4.懒加载、预先加载、延期加载
-5.取消不必要请求 页面卸载取消请求 new AbortController()
 
 ###  Object.create() 
 Object.create()用于创建一个新对象，并指定其原型；是实现原型式继承的核心工具。
@@ -271,7 +394,7 @@ v8 引擎主要是 负责对我门的javascript 代码编译、执行。解析�
     - DOM 型 XSS：攻击者利用前端代码对 DOM 操作的 “不安全处理”，在浏览器端注入恶意脚本并执行 
     - 前端防御：对内容进行转义，<<变为 &lt,  谨慎使用innerHTML ,优先使用textContent
 - 跨站的请求伪造：攻击者诱骗用户在其已登录的受信任网站（如银行网站）上，执行一个非本意的操作（如转账）。利用的是浏览器会自动携带目标站点的Cookie的特性 
-    - 用户登陆了银行网站， 攻击者诱骗用户点击了一个链接或访问一个恶意页面，该网站通过<img src="https://bank.com/transfer?to=attacker&amount=1000">发起 GET 请求，浏览器会自动将bank.com的 Cookie 附加到这个跨域请求中
+    - 用户登陆了银行网站， 攻击者诱骗用户点击了一个链接或访问一个恶意页面，该网站通过< img src="https://bank.com/transfer?to=attacker&amount=1000">发起 GET 请求，浏览器会自动将bank.com的 Cookie 附加到这个跨域请求中
     - 前端防御：Cookie 的SameSite属性，该属性会限制 “跨域请求时是否携带 Cookie”  SameSite=Strict。仅在同域请求时携带 Cookie（跨域请求完全不携带），能彻底阻止 CSRF。 但可能影响正常跨域功能（如第三方登录）。
     - SameSite=Lax（默认值）：仅在 “跨域的 GET 请求且是用户主动触发” 时携带 Cookie- 服务器生成一个随机的、不可预测的Token （在当前页面有效tio）存储在页面的表单隐藏字段或响应头里
     - 检查请求来源（Referer/Origin） 前端可在发送请求前检查 document.referrer（请求来源页面）或 location.origin
