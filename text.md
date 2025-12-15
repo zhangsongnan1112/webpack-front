@@ -31,7 +31,21 @@
     不会等待 async 脚本、图片、CSS（某些情况除外）、iframe 等资源
 4. window.addEventListener('unhandledrejection', callback) 捕获未处理的 Promise reject
 5. window.addEventListener('error', (e) => { ... })，捕获 JS 语法 / 运行时错误、资源加载错误。
-6. requestAnimationFrame（callback） 与浏览器刷新同步，下一次重绘前执行回调”，避免布局抖动
+6. requestAnimationFrame（callback）  与浏览器刷新同步，下一次重绘前执行回调”，避免布局抖动 cancelAnimationFrame取消
+    ```
+    const box = document.getElementById('box')
+    let startTime = null
+    const animate = function(time) {
+        if (!startTime) startTime = time;
+        const scoped = time - startTime;
+        const distance = (scoped / 1000) * 100;
+        box.style.left = distance + 'px';
+        if (distance < 500) {
+            requestAnimationFrame(animate);
+        }
+    };
+    requestAnimationFrame(animate)
+    ```
 7. 跨页面发送消息  BroadcastChannel
     ```
     const channel = new BroadcastChannel('channel-name')  
@@ -39,6 +53,30 @@
     channel.addEventListener('message', (e) => { })
     ````
 8. MutationObserver()监视 DOM 元素的属性变化、节点（增删移动）、文本内容
+
+### margin 重叠问题 
+产生margin重叠（仅垂直方向）的必然条件： 
+- 块元素（行内元素、行内块元素不会产生margin重叠）; 
+- 布局时在普通文档流，脱离文档流的元素（float: left/right、position: absolute/fixed）不会触发；
+- 元素之间无border、padding、文字、overflow: hidden；
+- 相邻的兄弟节点间、 父元素与第一个 / 最后一个子块级元素（父无 border/padding）；
+#####  相邻的兄弟节点间
+- 用 padding 替代其中一个元素的 margin（无副作用）；
+- 给元素加 display: inline-block + width: 100%；
+- 给元素加 float: left + 父元素清浮动；
+- position: relative
+
+#### 父子节点
+- 父元素加 border: 1px solid transparent（透明边框，不影响布局）；
+- 父元素加 padding: 1px（最小内边距，分隔父子 margin）；
+- 父元素加 display: flow-root（语义化，无副作用）；
+- 父元素加 overflow: hidden
+- 父元素加 display: flex
+> 如果父元素设置marginTop:10 子元素也设置marginTop:10 结果：子元素和父元素顶部紧贴 （子元素的 10px margin 完全 “穿透” 到父元素外部）父元素整体向下移动 10px（取父子 margin 的最大值，这里两者都是 10px）
+
+
+
+
 
 ### JSON.stringify()的特点
 -  对象的转化： '{"name":"Alice","age":30}'
@@ -202,6 +240,22 @@ WebP： 同时支持有损/无损 + 透明 + 动画，体积比 PNG/JPEG 小 25~
 8. mouseover	鼠标进入元素或其子元素		较少单独使用（易误触发）
 9. mouseout	鼠标离开元素或其子元素	 较少单独使用（易误触发）
 10. contextmenu	右键点击（或键盘菜单键）自定义右键菜单
+
+
+### Promise
+1. 创建Promise 
+    -  new Promise((resolve, reject) => { ... })   返回一个新的 Promise 对象。
+    -  Promise.resolve(value)  返回一个状态为 fulfilled 的 Promise
+    -  Promise.reject(reason)  返回一个状态为 rejected 的 Promise
+2. Promise 实例方法
+    - .then()   为 Promise 添加成功和失败的回调。返回一个新的 Promise 对象
+    - .catch() 专门为 Promise 添加失败的回调。 返回一个新的 Promise 对象
+    - .finally(onFinally)  添加一个无论成功或失败都会执行的回调   返回一个新的 Promise 对象
+3.静态方法
+    - Promise.all(iterable) 等待所有 Promise 都成功,一个失败就会立马返回   返回一个新的 Promise 对象
+    - Promise.allSettled(iterable)  等待所有 Promise 都完成（无论成败） 返回一个始终成功的 Promise 对象。
+    - Promise.race(iterable) 等待第一个完成的 Promise（无论成败）。 返回一个新的 Promise 对象
+    - Promise.any(iterable) 只要有一个成功，就立即返回其结果  所有都失败时才失败 返回一个新的 Promise 对象
 
 
 ### 哪些css属性支持transition
@@ -384,7 +438,7 @@ Object.getPrototypeOf(Array) === Function.prototype // true
 - Max-Age —— 过期时间（相对秒数）  Max-Age=3600（1 小时后过期）优先级高于 Expires
 
 ###  v8 引擎 垃圾回收机制
-v8 引擎主要是 负责对我门的javascript 代码编译、执行。解析器将javascript经过词法分析（将代码拆分成一个最小的语法单元）和语法分析（组合成有层次的树形结构，树的每个节点对应代码中的一个语法结构） 代码转化成 AST 抽象语法树，解释器（即使翻译官）将AST转换成生成字节码， 编译器会将 AST 解析成机器代码  垃圾回收机制采用分代回收的思想，针对不同声明周期的对象采用不同的策略；分为新生代和老生代两种策略；新生代处理临时的对象（比如刚创建的对象 函数内部的局部变量，临时数组等）。将新生代的内存分两个等大的区域From（使用中） 和To(空闲)，回收时，遍历From区的存活对象，复制到To区。清空From区，之后From和To角色互换。优点：速度极快（只处理小部分内存），适合频繁创建和销毁的对象， 如果对象在多次回收后仍存活（说明可能是长期对象），会被 "晋升" 到老生代。老生代处理长期对象（存活比较久的对象，比如全局变量、缓存数据等）占用内存比较大，回收频率比较低的对象。采用标记清除（从根出发标记所有存活的对象，遍历内存删除未被标记的对象，清除后会产生内存碎片-空闲内存比较分散） 和标记整理（标记后不直接删除垃圾，而是将存活的对象往一端移动，清除边界外的内存，不管是垃圾还是碎片都会清除 -解决内存碎片）的策略
+v8 引擎主要是 负责对我门的javascript 代码编译、执行。解析器将javascript经过词法分析（将代码拆分成一个最小的语法单元）和语法分析（组合成有层次的树形结构，树的每个节点对应代码中的一个语法结构） 代码转化成 AST 抽象语法树，解释器（即使翻译官）将AST转换成生成字节码， 编译器会将 AST 解析成机器代码垃圾回收机制采用分代回收的思想，针对不同声明周期的对象采用不同的策略；分为新生代和老生代两种策略；新生代处理临时的对象（比如刚创建的对象 函数内部的局部变量，临时数组等）。将新生代的内存分两个等大的区域From（使用中） 和To(空闲)，回收时，遍历From区的存活对象，复制到To区。清空From区，之后From和To角色互换。优点：速度极快（只处理小部分内存），适合频繁创建和销毁的对象， 如果对象在多次回收后仍存活（说明可能是长期对象），会被 "晋升" 到老生代。老生代处理长期对象（存活比较久的对象，比如全局变量、缓存数据等）占用内存比较大，回收频率比较低的对象。采用标记清除（从根出发标记所有存活的对象，遍历内存删除未被标记的对象，清除后会产生内存碎片-空闲内存比较分散） 和标记整理（标记后不直接删除垃圾，而是将存活的对象往一端移动，清除边界外的内存，不管是垃圾还是碎片都会清除 -解决内存碎片）的策略
 
 
 ### 前端的攻击
