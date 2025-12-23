@@ -74,7 +74,27 @@
 - 父元素加 display: flex
 > 如果父元素设置marginTop:10 子元素也设置marginTop:10 结果：子元素和父元素顶部紧贴 （子元素的 10px margin 完全 “穿透” 到父元素外部）父元素整体向下移动 10px（取父子 margin 的最大值，这里两者都是 10px）
 
+### js 数据类型 怎么区别array 和 object
+> string number boolean undefined null symbol  bigInt array object function 
+ - typeof 无法区分  typeof []  'object' 
+ - instanceof   有局限性 检测原型链   [] instanceof Array  // true  [] instanceof Object // true
+- constructor  是对象的内置属性 指向创建该对象的构造函数  arr.constructor === Array // true  arr.constructor === Object // false 但是有局限性 因为constructor是可以更改的 更改后就失效了 
+引用数据类型是一直有constructor number、boolean、string 原始值本身无属性，访问时自动装箱为包装对象，包装对象有 constructor
+- null 和 undefined 无原型、无包装对象，访问 constructor 直接报错
+- Object.create(null) 创建的对象 原型链为空，未继承 Object.prototype，无 constructor 属性
+- Array.isArray()  最准确、最简洁判断方法 Array.isArray(null) // false  Array.isArray(undefined); // false
+- Object.prototype.toString.call() 「未被重写的原始版本」 最精准、兼容性最好的原生类型检测方法 
+调用该方法时，会读取目标对象的内部属性 [[Class]]（一个字符串），
+- call() 的作用： Object.prototype.toString() 本身是挂载在 Object 原型上的方法，直接调用时 this 指向 Object.prototype；通过 call() 可以强制将 this 绑定到要检测的目标值上，
 
+```
+Object.prototype.toString.call([]) // "[object Array]"
+// 封装成工具函数（推荐）
+function getType(val) {
+    return Object.prototype.toString.call(val).slice(8, -1); // 截取类型名（如 "Array"）
+}
+```
+> 为什么不用普通的 toString() ？不同类型的对象重写了 toString() 方法 [1,2].toString() → "1,2"  普通对象的 toString() → 固定返回 "[object Object]"
 
 
 
@@ -177,6 +197,14 @@ Vue 的数据更新是异步批量处理的：
     ```
         import { createApp } from '/node_modules/.vite/deps/vue.js?v=xxx';
     ```
+### 前端性能监控指标
+1. FP （First Paint，首次绘制）浏览器首次将像素渲染到屏幕的时间（白屏时间），标志页面开始加载。
+2. FCP（First Contentful Paint，首次内容绘制）首次绘制文本、图片等有意义内容的时间，比 FP 更贴近用户感知
+3. LCP（Largest Contentful Paint，最大内容绘制） 视口内最大内容元素（如图片、文本块）渲染完成的时间，核心用户体验指标（目标：< 2.5s）
+4. TTI（Time to Interactive，可交互时间）页面加载后，用户可以流畅交互（点击、输入）的时间（无长任务阻塞）。
+5. CLS（Cumulative Layout Shift，累积布局偏移）视觉稳定性：页面是否“乱跳”
+6. 资源加载时间：HTML、CSS、JS、图片、接口等的下载、解析、执行时间
+
 
 ### 如何保证用户的使用体验
 1. 控制页面的响应速度3s, 每增加1s 用户流失率增加7%
@@ -192,15 +220,255 @@ Vue 的数据更新是异步批量处理的：
 11. 合理的loading、骨架屏、
 
 
-### 前端性能监控指标
-1. FP （First Paint，首次绘制）浏览器首次将像素渲染到屏幕的时间（白屏时间），标志页面开始加载。
-2. FCP（First Contentful Paint，首次内容绘制）首次绘制文本、图片等有意义内容的时间，比 FP 更贴近用户感知
-3. LCP（Largest Contentful Paint，最大内容绘制） 视口内最大内容元素（如图片、文本块）渲染完成的时间，核心用户体验指标（目标：< 2.5s）
-4. TTI（Time to Interactive，可交互时间）页面加载后，用户可以流畅交互（点击、输入）的时间（无长任务阻塞）。
-5. CLS（Cumulative Layout Shift，累积布局偏移）视觉稳定性：页面是否“乱跳”
-6. 资源加载时间：HTML、CSS、JS、图片、接口等的下载、解析、执行时间
+
+### 跨域解决方案
+> 跨域是指浏览器因同源策略限制，阻止不同协议、域名、端口号页面之间进行资源交互（如AJAX请求、DOM操作）
+1. CORS（跨域资源共享）现代浏览器默认支持的官方跨域解决方案，后端通过设置相应头，Access-Control-Allow-Origin ： 域名；明确的制定域名的跨域请求，简单请求（get 、post）预检请求（option）（content-Type: application/json）浏览器会先发送 OPTIONS 预检请求， 验证后端允许跨域后，再发送真实请求 
+优势：官方标准、支持所有 HTTP 方法、支持携带 Cookie、无需前端额外处理（仅后端配置）
+2. JSONP：早期解决跨域的主流方案 ， 用 script 标签不受同源策略限制的特性，通过动态创建 script 标签加载跨域资源，仅支持 GET 请求, 不支持跨域cookie携带。 易受xss攻击， 前端定义一个回调函数（如 callbackFn），用于接收跨域返回的数据；
+
+###  https 怎么保证数据安全
+ - 数字证书 + CA认证
+ 1. 服务器的公钥会交给第三方权威机构（CA）认证，生成「数字证书」（包含公钥、服务器域名、CA 签名）
+ 2. 客户端拿到证书后，会验证 3 件事：证书是否由可信 CA 签发；证书域名是否和请求域名一致；证书是否未过期 / 未被吊销
+ - 对称加密和非对称加密传递数据
+1. 非对称加密
+ - 服务器有一对「公钥 + 私钥」：公钥可公开，私钥自己保管；
+ - 客户端请求时，服务器把「带数字证书的公钥」发给客户端；
+ - 客户端生成一个「随机对称密钥」（后续传数据用），用服务器公钥加密后发回服务器；
+ - 服务器用私钥解密，拿到这个对称密钥
+2. 对称加密 （对称加密效率高，适合大量数据传输）。
+- 客户端和服务器用刚才协商的「对称密钥」加密所有传输数据， （请求头、请求体、响应内容）
+
+### flex: 1  flex: 1 1 0 缩写
+> Flex 项目的 flex 属性是 flex-grow、flex-shrink、flex-basis 的简写  flex: <flex-grow> <flex-shrink> <flex-basis>;
+    - flex-grow: 容器有剩余空间时，项目会按比例瓜分剩余空间（1 表示参与瓜分）
+    - flex-shrink: 容器空间不足时，项目会按比例缩小（1 表示参与收缩）
+    - flex-basis: 设置容器的初使尺寸 
+
+### vue 使用nextTick 原因和场景 
+ > 数据更新后， 立即操作 / 获取更新后的 DOM ---- 数据变了，想立刻用最新 DOM → 套一层 nextTick。
+ - Vue 采用「异步更新 DOM」策略：当你修改 data 里的数据时，Vue 不会立刻更新 DOM，而是将数据变更缓存到「异步更新队列」，等当前同步代码执行完后，再批量更新 DOM（避免频繁操作 DOM 导致性能损耗）。
+
+### Map Set WeakMap  WeakSet
+> 区别 需要存对象，且希望对象不用时自动回收 → 用 WeakMap/WeakSet；需要遍历 / 存基本类型 → 用 Map/Set。
+ 1. map 
+    - 键值对结合；
+    - 键唯一，值可重复；
+    - 键可以使任意类型（基本数据类型、对象、函数）；
+    - size属性；
+    - 常用方法：set(key, val)/get(key)/has(key)/delete(key)；
+    - 遍历： 可按「键、值、键值对」遍历（keys()/values()/entries()）
+```
+    // 1. 用对象当键（普通对象做不到，对象键会被转为字符串）
+    const objKey = { id: 1 };
+    const map = new Map();
+    map.set(objKey, '用户1'); 
+    console.log(map.get(objKey)); // 输出：用户1（精准匹配对象键）
+
+    // 2. 遍历 Map
+    for (const [key, value] of map.entries()) {
+    console.log(key, value); // {id:1}  用户1
+    }
+```
+ 2. set 
+   - 值的结合；
+   - 无重复值；
+   - 值可以是任意类型；
+   - size属性；
+   - 常用方法： add(val)/has(val)/delete(val)/clear()；
+   - 遍历：仅遍历「值」（keys()/values() 均返回值）
+```
+    // 1. 数组去重（前端最常用）
+    const arr = [1, 2, 2, 3];
+    const uniqueArr = [...new Set(arr)]; // [1,2,3]
+
+    // 2. 判断值是否存在（比数组 indexOf 更高效）
+    const set = new Set([1,2,3]);
+    console.log(set.has(2)); // true
+    console.log(set.has(4)); // false
+```
+3. WeakMap	键是对象（弱引用）、不可遍历、无 size
+4. WeakSet	值是对象（弱引用）、不可遍历、无 size
 
 
+### cookie localstorage 的区别 那些情况和设置 请求不会携带 cookie 
+ 1. 存储大小： cookie 4kb  localstorage 5M 
+ 2. 生命周期： cookie可这是过期时间  localstorage不会自动删除
+ 3. 服务器交互:  自动携带到同源请求的 HTTP 头中（Cookie 字段）  完全存储在客户端，默认不参与服务器交互
+ 4. 访问权限:  cookie客户端（JS）+ 服务端（HTTP 头）均可读写   localstorage仅客户端（JS）可读写
+ 5. 作用域: 可通过 Domain/Path 限制生效范围   localstorage同域名 / 同协议 / 同端口下共享
+-  那些情况和设置 请求不会携带 cookie 
+ 1. httponly 仅能通过 HTTP/HTTPS 请求携带，客户端 JS 无法访问（document.cookie 读不到）；
+ 2. 跨域 协议 / 端口不匹配
+ 3. SameSite 属性  限制跨站请求时 Cookie 的携带规则
+    - Strict 仅同站请求（同域名 + 同协议 + 同端口）携带，跨站（如跳转、跨域 AJAX）均不携带
+    - Lax 跨站的「导航类请求」（如链接跳转、表单提交）携带，AJAX/Fetch 跨域不携带（默认值）
+    - None 所有的都携带
+
+### dom 怎么添加事件
+- addEventListener   removeEventListener
+- btn.onclick = function() {}
+- 事件委托（事件代理） e.target：实际触发事件的元素（事件源） e.currentTarget：绑定事件的元素
+
+
+### 经常用到的array 方法 类数组怎么转为数组
+- 改变原数组的
+    - push() 尾部添加 返回新数组长度
+    - pop() 尾部删除 返回新数组长度
+    - unshift() 头部添加  返回新数组长度
+    - shift()  头部删除 返回新数组长度
+    - splice() 任意位置增 / 删 / 改，返回被删除的元素数组
+    - reverse() 数组反转 返回新数组
+    - fill() 填充 返回新数组
+    - sort() 排序 返回新数组
+- 不改变原数组的
+    - concat() 连接   返回新数组
+    - join() 转成字符串  返回字符串
+    - flat() 扁平化数据  返回新数组
+    - forEach() 遍历 无返回值
+    - map 返回新数组
+    - filter() 返回新数组
+    - find()  找第一个符合条件的元素，返回元素 /undefined
+    - findIndex() 找第一个符合条件的索引，返回索引 /-1
+    - some() 有一个符合条件返回 true
+    - every() 所有元素符合条件返回 true
+    - indexOf()  找元素首次出现的索引，返回索引 /-1
+    - includes() 判断是否包含元素，返回布尔值
+    - slice()  截取数组（含头不含尾），返回新数组
+    - reduce()  返回新数组
+- 类数组怎么转为数组   
+    - 扩展运算符 [...arr]  
+    - Array.from()    Array.from(arrLike, (item) => item * 2);
+    - Array.prototype.slice.call() 原理：slice() 方法内部会根据 length 遍历索引，返回新数组   const arrLike = { 0: 10, 1: 20, length: 2 }; const arr = [].slice.call(arrLike); // [10,20]（简化写法，等效上面）
+
+### let const区别 const 声明了数组 还能push元素么 为什么
+let 块级作用域 声明变量  const 块级作用域 声明常量 声明必须赋值 不允许重新赋值
+数组是「引用类型」：变量 arr 存储的是 “指向数组实际数据的内存地址”（堆内存），const 锁定的是这个 “地址指针”，而非堆内存里的数组内容；
+push修改元素：只是修改堆内存中数组的内部数据，并没有改变 arr 指向的内存地址，因此符合 const 的规则。
+
+const 声明原始类型：栈内存的值不可改 → 完全不能重新赋值；
+const 声明引用类型：栈内存的地址不可改 → 不能重新赋值，但可修改堆内存的内部数据；
+let 无此限制：无论原始 / 引用类型，都可重新赋值（基本数据类型改值 / 引用数据类型改地址）。
+
+
+
+### 原型链 es6 class 怎么设置原型 静态、实例方法
+> class 本质是函数和原型链的语法糖，静态方法用static定义在类本身实力是不能访问的，实例方法定义在 prototype 上  extends实现继承设置原型
+```
+class Animal {
+    constructor(type) {
+        this.type = type;
+    }
+    move() { console.log(`${this.type}在移动`); }
+    static isAnimal(obj) { return obj instanceof Animal; }
+}
+class Dog extends Animal {
+    constructor(name) {
+        super('狗');
+        this.name = name;
+    }
+}
+var dog = new Dog()
+dog（实例）.__proto__ → Dog.prototype
+Dog.prototype.__proto__ → Animal.prototype
+Animal.prototype.__proto__ → Object.prototype
+Object.prototype.__proto__ → null
+
+Dog（类）.__proto__ → Animal（类）
+Animal（类）.__proto__ → Function.prototype
+Function.prototype.__proto__ → Object.prototype
+Object.prototype.__proto__ → null
+
+```
+
+### fetch 优缺点 怎么做polyfill
+
+- 优点: 语法简洁、语义清晰： 基于promise的链式调用，async await语法简繁
+- 优点: 流式的处理数据， XHR 只能「一次性接收完整响应】，而 Fetch的response.body 是 ReadableStream（可读流），可以「边接收边处理」，适合超大文件、实时日志、视频流等场景。
+- 缺点：错误的捕获上 即使响应是 404/500 等状态码，Fetch 也不会触发 catch，需手动判断 response.ok
+- 不支持取消请求
+- 无法直接监听请求 / 响应的进度（如文件上传进度）
+- 无超时默认配置， 需手动结合 Promise.race 实现超时逻辑，原生无 timeout 参数
+
+```
+async function fetchData() {
+    try {
+        const response = await fetch('https://api.example.com/data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: 1 }),
+            credentials: 'include' // 跨域携带 Cookie
+        });
+        // 必须手动判断状态码，否则 404/500 不会进入 catch
+        if (!response.ok) { 
+            throw new Error(`HTTP 错误：${response.status}`);
+        }
+        const data = await response.json(); // 原生解析 JSON
+        console.log(data);
+    } catch (err) {
+        console.error('请求失败：', err);
+    }
+}
+```
+
+```
+fetch('https://api.example.com/large-file.log')
+  .then(response => {
+    // 1. 获取可读流
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8'); // 解码二进制流为文本
+    // 2. 逐段读取流（边读边处理）
+    function readChunk() {
+      reader.read().then(({ done, value }) => {
+        if (done) {
+          console.log('文件读取完成');
+          return;
+        }
+        // 3. 处理当前段数据（比如实时打印日志）
+        const chunk = decoder.decode(value);
+        console.log('收到日志片段：', chunk);
+        // 继续读取下一段
+        readChunk();
+      });
+    }
+
+    readChunk();
+  });
+```
+```
+    function timeoutPromise(delay) {
+        return new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error(`请求超时（${delay}ms）`));
+            }, delay);
+        });
+    }
+    function fetchData(url) {
+        return fetch(url, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        }).then(response => {
+            if (!response.ok) throw new Error(`HTTP 错误：${response.status}`);
+            return response.json();
+        });
+    }
+    // 结合 Promise.race 实现超时控制（5秒超时）
+    async function requestWithTimeout(url) {
+        try {
+            // 谁先完成就执行谁：请求完成 / 5秒超时
+            const result = await Promise.race([
+                fetchData(url),       // 业务 Promise
+                timeoutPromise(5000)  // 超时 Promise（5000ms = 5秒）
+            ]);
+            return result;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    requestWithTimeout('https://api.example.com/data');
+```
 
 
 ### 图片格式 png、jpg、jpeg、webp
@@ -306,7 +574,7 @@ Vue 的数据更新是异步批量处理的：
 - import styles from './index.scss'; 将css模块转成js模块 像这种 引入的方式都是因为webpack配置了css-loader style-loader(也不能用在css文件内import是es_module 语法)
 
 ### 加载js的方式
-1.  < script src="./index.js"> < /script> < script async src="script.js">< /script>下载后立即执行 < script defer src="script.js"> < /script > 下载后文档解析完在执行
+1. < script src="./index.js"> < /script> < script async src="script.js">< /script>下载后立即执行 < script defer src="script.js"> < /script > 下载后文档解析完在执行
 2. 动态脚本 按需引入 const script = document.createElement('script'); script.src = 'script.js'; document.head.appendChild(script);
 3. es6 export function add(a, b) {return a + b;} import { add } from './math.js'; 在 HTML 中引入主文件，需添加 type="module" < script type="module" src="main.js"></script >
 4. CommonJS  module.exports = { sum }; 或者 exports.sum = sum;  const { sum } = require('./utils.js');
