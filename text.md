@@ -85,6 +85,7 @@
 - 不支持循环引用。  
 - NaN 和 Infinity 被转为 null， 
 - 可传入函数或数组来控制哪些属性被序列化
+- undefined、symbol、function，会直接被转成undefined  undefined在数组中会变转成null 在对象里会被忽略
 ```
 JSON.stringify({ a: undefined, b: function() {}, c: Symbol('id') });   // '{}'
 JSON.stringify([undefined, function(){}, Symbol('x')]);   // '[null,null,null]
@@ -131,6 +132,8 @@ function myStringify(params, stack = []) {
 ### fiber
 fiber是用来实现增量渲染的 react 15以前是递归的去构建虚拟DOM和diff算法，这个过程呢是不可以去中断的，如果组件树很大很复杂，就会导致主线程被占用很长时间，造成页面的卡顿和白屏 会影响用户体验，fiber框架 将我们整个渲染过拆分可以中断 可恢复的任务单元，可以利用浏览器的空闲时间 去逐步完成更新。fiber = 一个可中断的渲染任务单元（每一个元素对应一个fiber节点）fiber还引入了任务优先级 用户交互的优先级 > 数据获取 (fetch) > 过期任务 高优先级任务可以打断低优先级任务的执行 fiber的好处 可以实现更流畅的UI 更灵活的渲染控制
 
+React 「渲染」的核心：它就是内存中构建新虚拟 DOM（Fiber） + 执行 Diff 算法的过程，是 React 确定 “是否需要更新真实 DOM、更新哪些 DOM” 的前置计算步骤 —— 这个过程是否执行，和最终是否更新真实 DOM 无关；哪怕最终不更新 DOM，「渲染」依然可能发生
+
 ### 为什么 react 需要fiber 而vue 不需要
 本质原因： 追踪依赖的方式不一样 
 （依赖追踪指的是：当组件使用了某些状态（state、prop））组件不知道自己用了哪些状态，不知道自己该不该更新
@@ -138,9 +141,9 @@ react： 手动的去触发更新 ，不会去自动的追踪依赖，而是触�
 vue 采用的是响应式系统 + 响应的依赖追踪 组件初始化时自动的收集模版中用到的响应式数据作为依赖，只有依赖数据变化组件才会被更新，更新是精准的 局部的
 
 ### react的diff 和vue的diff
-react 和 vue 都使用虚拟DOM和diff算法来高效更新真实DOM，通过diffl算法来对比新旧虚拟 DOM 树。
+react 和 vue 都使用虚拟DOM和diff算法来高效更新真实DOM，通过diff算法来对比新旧虚拟 DOM 树。
 React 的 diff 算法基于 “同层比较” 策略，它不会跨层级对比节点。通过 key 来判断是否为相同节点。节点类型不同会直接销毁DOM构建新的DOM树，节点类型和Key一样就会复用。
-vue 同层比较。根据key. 查找最长的递归子序列，还会标记静态节点、变量提升。
+vue 同层比较。根据key. 查找最长的递归子序列，还会标记静态节点、变量提升、双端比较。
 
 ### 为什么需要 nextTick？ Vue.nextTick() 用于在下次 DOM 更新循环结束后执行回调
 Vue 的数据更新是异步批量处理的：
@@ -156,10 +159,10 @@ Vue 的数据更新是异步批量处理的：
 
 ### 前端如何解决页面请求接口大规模并发问题
 1. 限制并发数量 ， 避免一次性发起过多请求导致的问题
-2.控制请求频率：防抖、节流
-3.合并请求 与 缓存 静态文件强缓存 ， localStorage、sessionStorage 或 IndexedDB 缓存数据
-4.懒加载、预先加载、延期加载
-5.取消不必要请求 页面卸载取消请求 new AbortController()
+2. 控制请求频率：防抖、节流
+3. 合并请求 与 缓存 静态文件强缓存 ， localStorage、sessionStorage 或 IndexedDB 缓存数据
+4. 懒加载、预先加载、延期加载
+5. 取消不必要请求 页面卸载取消请求 new AbortController()
 
 ### vite 原理
 - 开发阶段：基于原生 ES 模块（ESM），无需打包
@@ -201,9 +204,9 @@ Vue 的数据更新是异步批量处理的：
 
 
 ### 图片格式 png、jpg、jpeg、webp
-PNG： 无损压缩：解压后像素数据与原始完全一致，但是压缩率小。支持透明度，不支持动画。适合 logo、图标等。
-JPG / JPEG： 有损压缩：丢弃人眼不易察觉的高频信息。压缩率高，文件体积小；不支持透明度（背景必须是实色）；不支持动画；适合照片、自然图像等色彩丰富、细节多的场景
-WebP： 同时支持有损/无损 + 透明 + 动画，体积比 PNG/JPEG 小 25~35%
+- PNG： 无损压缩：解压后像素数据与原始完全一致，但是压缩率小。支持透明度，不支持动画。适合 logo、图标等。
+- JPG / JPEG： 有损压缩：丢弃人眼不易察觉的高频信息。压缩率高，文件体积小；不支持透明度（背景必须是实色）；不支持动画；适合照片、自然图像等色彩丰富、细节多的场景
+- WebP： 同时支持有损/无损 + 透明 + 动画，体积比 PNG/JPEG 小 25~35%
 
 ### 白屏 如何排查
 - 资源加载失败（html/js/css）、
@@ -455,6 +458,40 @@ v8 引擎主要是 负责对我门的javascript 代码编译、执行。解析�
     - 点击劫持 攻击者使用一个透明的iframe覆盖在一个看似无害的网页按钮之上，诱使用户点击，实际上用户点击的是隐藏iframe中的某个敏感操作 
     - 设置允许哪写iframe 可以引入
 
+
+### git撤销更改
+1. git 撤销本地更改 
+- 第一步： git restore .   或 git checkout .  或   git restore 文件名 
+2. git 撤销已经add 的 更改
+- 第一步：git reset HEAD . 
+-  第二步：git restore .  或  git checkout .  或   git restore 文件名 
+3. git 撤销某次提交 已经推送到远端也可以这样撤销 git reset 适合只有自己开发的分支（要不然容易撤销别人的代码）
+1. 软撤销 - 撤销后的更改会保留到工作区   git reset --soft HEAD~1      # HEAD~1 撤销最近1次提交，HEAD~2 撤销2次，
+2. 硬撤销  - 彻底删除提交和代码修改  git reset --hard HEAD~1
+3. 撤销某次更改 （保留后续提交）  git revert  提交ID
+4. git fetch : 仅拉取远端仓库的更新（提交记录、分支、标签等）到本地，但不修改本地工作区 / 分支代码的命令。把远端的更新下载到本地的「远端追踪分支」。不会影响本地的修改。
+```
+# 拉取远端 origin 的所有更新（所有分支、标签）
+git fetch origin
+# 查看本地 main 与远端 origin/main 的差异
+git log main..origin/main
+# 查看具体代码差异
+git diff main origin/main
+```
+```
+执行完git fect后 ，想把远端的内容合并到本地，需要手动执行合并 / 变基（这也是 git pull 自动做的事）：
+
+# 方式1：合并（会生成合并提交，保留历史）
+git checkout main  # 确保在本地 main 分支
+git merge origin/main  # 把 origin/main 的 X 合并到本地 main
+
+# 方式2：变基（把本地提交“接”在 X 后面，历史更整洁）
+git checkout main
+git rebase origin/main
+
+# 方式3：直接 git pull（等价于 fetch + merge）
+git pull origin main
+```
 
 
 
