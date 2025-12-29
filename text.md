@@ -579,6 +579,18 @@ fetch('https://api.example.com/large-file.log')
 3. es6 export function add(a, b) {return a + b;} import { add } from './math.js'; 在 HTML 中引入主文件，需添加 type="module" < script type="module" src="main.js"></script >
 4. CommonJS  module.exports = { sum }; 或者 exports.sum = sum;  const { sum } = require('./utils.js');
 
+### require 和 import 引入js 的区别
+1. require 属于commonJS 模块规范   module.exports
+    - 加载时机不同：运行时同步加载，执行在require语句才去加载，会阻塞后续代码，同步读取执行文件， 执行完成后才去继续下面代码
+    - 值拷贝 基本类型：拷贝变量当前值，导出后内外变量相互独立，内部修改不影响外部导入值； 引用类型：拷贝内存引用地址，可修改内部属性（同步外部），但无法同步对象本身的引用替换
+    - 支持动态导入：路径可使用变量、表达式拼接（如 require('./' + name + '.js')），语法灵活
+2. import/export 属于ES6 模块规范   export / export default
+    - 编译时（静态）异步加载，编译阶段就完成了解析，不阻塞运行时代码，底层异步加载模块
+    - 实时绑定： 导入的变量不是拷贝，而是对导出变量的实时引用，内外共享同一变量实例， 导出模块内部修改变量，会实时同步到所有导入方。导入方仅拥有只读权限，无法直接修改绑定本身
+    - 
+
+
+
 ### 不同标签间的通讯方式
 1. url 
 2. localStorage 
