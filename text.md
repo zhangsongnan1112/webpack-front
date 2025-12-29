@@ -1185,6 +1185,40 @@ requestWithTimeout('https://api.example.com/data');
   ```
   适合同源下任意标签、iframe实时消息广播。
 
+### px 转 rem 原理与实现
+
+`rem`（root em）是一种相对于根元素（通常是 `<html>`）字体大小的单位。  
+要实现 px 到 rem 的转换，核心思路是 **动态设置 `<html>` 的 font-size，并将布局单位用 rem 表示**，从而实现响应式适配和灵活缩放。
+
+#### 一、基本换算关系
+
+- 1 rem = 根元素（html）的 font-size
+- 如 html 设置 font-size: 16px，则 1 rem = 16px
+- 设计稿量出尺寸（px），然后使用以下公式换算：
+
+  ```
+  rem值 = px值 / 根font-size
+  ```
+
+#### 二、常见的适配实现方式
+
+##### 1. 设计稿等比缩放
+
+页面初始化时，动态设置 `<html>` 的 font-size，使其与视口宽度成正比，常用于移动端适配。
+
+```js
+// 以 750px 设计稿为例，每 1rem=100px，则 font-size=window.innerWidth/7.5
+function setRemBase() {
+  const html = document.documentElement;
+  const baseSize = 100;
+  const designWidth = 750;
+  html.style.fontSize = (window.innerWidth / (designWidth / baseSize)) + 'px';
+}
+window.addEventListener('resize', setRemBase);
+setRemBase();
+```
+则样式用 rem 编写，例如 `.box { width: 3.75rem; }` 相当于 375px/100=3.75rem。
+
 
 
 
