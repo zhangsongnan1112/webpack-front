@@ -1,118 +1,169 @@
-1. element.getBoundingClientRect() 获取元素位置信息
-2. IntersectionObserver() 异步监听元素与视口 / 根元素的交叉状态-解决scroll事件监听元素可见性带来的性能问题
-    ```
-        const observer = new IntersectionObserver((entries) => {
-            console.log(entries, 'entries')
-            entries.forEach(item => {
-                if (item.isIntersecting && item.intersectionRatio >= 1) {
-                    item.target.classList.add('red');
-                }
-            });
-        }, {
-            // 当元素可见比例达到 30%、50%、100% 时触发回调
-            threshold: [0.3, 1],     // 默认值为 0（仅在元素刚进入视口时触发一次）
-            root: null,  // 观察的跟元素， 必须是目标元素的祖先节点 监听元素在某个滚动容器内的可见性
-            rootMargin: "100px 0px" // 根容器的扩展边距. , 元素进入视口前 100px 就触发回调
-        });
-
-        const boxes = document.querySelectorAll('.hot');
-        console.log(boxes, 'boxes')
-        boxes.forEach(el => observer.observe(el));
-
-        // ✅ 清理：断开观察，防止内存泄漏和卸载后回调
-        return () => {
-            observer.disconnect();
-        };
-    ```
-3. document.addEventListener('DOMContentLoaded', callback)
-    HTML 文档已完全解析完成（DOM 树构建完毕）
-    所有同步脚本（阻塞型 script）已下载并执行完毕
-    所有 defer 脚本已下载并执行完毕
-    不会等待 async 脚本、图片、CSS（某些情况除外）、iframe 等资源
-4. window.addEventListener('unhandledrejection', callback) 捕获未处理的 Promise reject
-5. window.addEventListener('error', (e) => { ... })，捕获 JS 语法 / 运行时错误、资源加载错误。
-6. requestAnimationFrame（callback）  与浏览器刷新同步，下一次重绘前执行回调”，避免布局抖动 cancelAnimationFrame取消
-    ```
-    const box = document.getElementById('box')
-    let startTime = null
-    const animate = function(time) {
-        if (!startTime) startTime = time;
-        const scoped = time - startTime;
-        const distance = (scoped / 1000) * 100;
-        box.style.left = distance + 'px';
-        if (distance < 500) {
-            requestAnimationFrame(animate);
+**1. `element.getBoundingClientRect()`**  
+获取元素相对于视口的位置和大小信息。
+**2. `IntersectionObserver`**  
+异步监听元素与视口/根元素交叉状态，解决 `scroll` 事件监听可见性带来的性能问题。  
+```js
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(item => {
+        if (item.isIntersecting && item.intersectionRatio >= 1) {
+            item.target.classList.add('red');
         }
-    };
-    requestAnimationFrame(animate)
-    ```
-7. 跨页面发送消息  BroadcastChannel
-    ```
-    const channel = new BroadcastChannel('channel-name')  
-    channel.postMessage(data)
-    channel.addEventListener('message', (e) => { })
-    ````
-8. MutationObserver()监视 DOM 元素的属性变化、节点（增删移动）、文本内容
+    });
+}, {
+    // 可见比例达到 30%、100% 时触发回调
+    threshold: [0.3, 1],
+    root: null,                   // 观察视口（也可指定滚动容器）
+    rootMargin: "100px 0px"       // 提前 100px 触发
+});
 
-### margin 重叠问题 
-产生margin重叠（仅垂直方向）的必然条件： 
-- 块元素（行内元素、行内块元素不会产生margin重叠）; 
-- 布局时在普通文档流，脱离文档流的元素（float: left/right、position: absolute/fixed）不会触发；
-- 元素之间无border、padding、文字、overflow: hidden；
-- 相邻的兄弟节点间、 父元素与第一个 / 最后一个子块级元素（父无 border/padding）；
-#####  相邻的兄弟节点间
-- 用 padding 替代其中一个元素的 margin（无副作用）；
-- 给元素加 display: inline-block + width: 100%；
-- 给元素加 float: left + 父元素清浮动；
-- position: relative
+const boxes = document.querySelectorAll('.hot');
+boxes.forEach(el => observer.observe(el));
 
-#### 父子节点
-- 父元素加 border: 1px solid transparent（透明边框，不影响布局）；
-- 父元素加 padding: 1px（最小内边距，分隔父子 margin）；
-- 父元素加 display: flow-root（语义化，无副作用）；
-- 父元素加 overflow: hidden
-- 父元素加 display: flex
-> 如果父元素设置marginTop:10 子元素也设置marginTop:10 结果：子元素和父元素顶部紧贴 （子元素的 10px margin 完全 “穿透” 到父元素外部）父元素整体向下移动 10px（取父子 margin 的最大值，这里两者都是 10px）
+// ✅ 断开观察，防止内存泄漏（如组件卸载场景）
+return () => observer.disconnect();
+```
+**3. `document.addEventListener('DOMContentLoaded', callback)`**  
+- HTML 文档解析完成，DOM 构建完毕
+- 所有同步 `script` 和 `defer` 脚本执行结束
+- _不会_ 等待 `async` 脚本、图片、CSS、iframe 等资源
+
+**4. `window.addEventListener('unhandledrejection', callback)`**  捕获未处理的 Promise reject 异常。
+
+**5. `window.addEventListener('error', (e) => { ... })`**  
+捕获 JS 语法/运行时错误，以及资源加载错误。
+
+**6. `requestAnimationFrame(callback)`**  与浏览器刷新同步，下一次重绘前执行回调，避免布局抖动。  可用 `cancelAnimationFrame` 取消。
+
+```js
+const box = document.getElementById('box');
+let startTime = null;
+function animate(time) {
+    if (!startTime) startTime = time;
+    const elapsed = time - startTime;
+    const distance = (elapsed / 1000) * 100;
+    box.style.left = distance + 'px';
+    if (distance < 500) {
+        requestAnimationFrame(animate);
+    }
+}
+requestAnimationFrame(animate);
+```
+
+**7. 跨页面发送消息：`BroadcastChannel`**
+
+```js
+const channel = new BroadcastChannel('channel-name');
+channel.postMessage(data);
+channel.addEventListener('message', (e) => {
+    // ...
+});
+```
+**8. `MutationObserver`**   监视 DOM 元素属性变化、节点增删/移动、文本内容修改等。
+
+### `margin` 垂直重叠问题
+
+**产生条件**  
+- 仅发生在**块级元素**（行内/行内块元素不会重叠）  
+- 必须都处于**普通文档流**（浮动、绝对/固定定位元素不会重叠）  
+- 两元素之间**没有 border、padding、文字内容，且没有设置 `overflow: hidden`**  
+- 典型场景：
+    - **相邻兄弟元素之间**
+    - **父元素与第一个或最后一个子块级元素之间**（父无 border/padding）
+
+**相邻兄弟元素间的重叠解决办法**
+- 使用 `padding` 替代其中一个元素的 `margin`
+- 给元素加 `display: inline-block; width: 100%`
+- 浮动元素（`float: left`），父容器清除浮动
+- 加 `position: relative` 打破重叠
+
+**父子块级元素间的重叠解决办法**
+- 父元素设置 `border: 1px solid transparent`（透明边框，不影响实际布局）
+- 父元素设置 `padding: 1px`（最小内边距）
+- 父元素加 `display: flow-root;`（语义化、无副作用的块格式化上下文）
+- 父元素加 `overflow: hidden`
+- 父元素加 `display: flex`
+
+> **注意**：如果父元素和子元素都设置了 `margin-top: 10px`，实际会导致父子顶部紧贴，且父元素整体向下移动 10px（取两者最大者！），而不是 20px。
+
 
 ### js 数据类型 怎么区别array 和 object
-> string number boolean undefined null symbol  bigInt array object function 
- - typeof 无法区分  typeof []  'object' 
- - instanceof   有局限性 检测原型链   [] instanceof Array  // true  [] instanceof Object // true
-- constructor  是对象的内置属性 指向创建该对象的构造函数  arr.constructor === Array // true  arr.constructor === Object // false 但是有局限性 因为constructor是可以更改的 更改后就失效了 
-引用数据类型是一直有constructor number、boolean、string 原始值本身无属性，访问时自动装箱为包装对象，包装对象有 constructor
-- null 和 undefined 无原型、无包装对象，访问 constructor 直接报错
-- Object.create(null) 创建的对象 原型链为空，未继承 Object.prototype，无 constructor 属性
-- Array.isArray()  最准确、最简洁判断方法 Array.isArray(null) // false  Array.isArray(undefined); // false
-- Object.prototype.toString.call() 「未被重写的原始版本」 最精准、兼容性最好的原生类型检测方法 
-调用该方法时，会读取目标对象的内部属性 [[Class]]（一个字符串），
-- call() 的作用： Object.prototype.toString() 本身是挂载在 Object 原型上的方法，直接调用时 this 指向 Object.prototype；通过 call() 可以强制将 this 绑定到要检测的目标值上，
+**基本数据类型**： `string` `number` `boolean` `undefined` `null` `symbol` `bigInt`  
+**引用数据类型**： `object` `array` `function`
 
-```
-Object.prototype.toString.call([]) // "[object Array]"
-// 封装成工具函数（推荐）
-function getType(val) {
-    return Object.prototype.toString.call(val).slice(8, -1); // 截取类型名（如 "Array"）
-}
-```
-> 为什么不用普通的 toString() ？不同类型的对象重写了 toString() 方法 [1,2].toString() → "1,2"  普通对象的 toString() → 固定返回 "[object Object]"
+**数组与对象的区别方法：**
+- **`typeof`**  不能区分数组和对象，例如：  
+  ```js
+  typeof []         // "object"
+  typeof {}         // "object"
+  ```
+
+- **`instanceof`**  检测原型链关系：  
+  ```js
+  [] instanceof Array   // true
+  [] instanceof Object  // true
+  ```
+  > 注意：在跨 iframe、多个全局环境或原型被修改情况下失效。
+
+- **`constructor` 属性**  指向对象的构造函数：  
+  ```js
+  arr.constructor === Array   // true
+  arr.constructor === Object  // false
+  ```
+  > 缺点：constructor 可被更改或覆盖，不完全可靠。原始值(number/boolean/string)访问 constructor 时会装箱。`null` 和 `undefined` 没有原型和 constructor，访问会报错。`Object.create(null)` 创建的对象无原型也无 constructor。
+
+- **`Array.isArray()`**  
+  最简便且推荐的判断数组方法：  
+  ```js
+  Array.isArray(null) // false
+  Array.isArray([])   // true
+  ```
+
+- **`Object.prototype.toString.call()`**  
+  最精准、兼容性最佳的类型检测：  
+  ```js
+  Object.prototype.toString.call([]) // "[object Array]"
+  ```
+  读取对象内部 `[[Class]]` 属性。  
+  推荐封装方法：
+  ```js
+  function getType(val) {
+    return Object.prototype.toString.call(val).slice(8, -1);
+  }
+  getType([]);      // "Array"
+  getType({});      // "Object"
+  getType('str');   // "String"
+  ```
+  `.call()` 作用：将 `toString` 的 this 指向需要检测的目标值。
+
+> 🚩 **为什么不用普通的 toString()?**  
+> - 各类对象的 toString 方法常被重写：  
+>   `[1,2].toString()` → `"1,2"`  
+>   普通对象的 `toString()` → `"[object Object]"` （无法区分类型）
 
 
 
 ### JSON.stringify()的特点
--  对象的转化： '{"name":"Alice","age":30}'
-- 数组的转化’[1,2,3]’， 
-- 在对象中会忽略undefined,函数,symbol，在数组中会被转为 null， 
-- 不支持循环引用。  
-- NaN 和 Infinity 被转为 null， 
-- 可传入函数或数组来控制哪些属性被序列化
-- undefined、symbol、function，会直接被转成undefined  undefined在数组中会变转成null 在对象里会被忽略
-```
-JSON.stringify({ a: undefined, b: function() {}, c: Symbol('id') });   // '{}'
-JSON.stringify([undefined, function(){}, Symbol('x')]);   // '[null,null,null]
-JSON.stringify({ x: NaN, y: Infinity }); // '{"x":null,"y":null}'
-```
+- **对象转字符串**：`{"name":"Alice","age":30}`
+- **数组转字符串**：`[1,2,3]`
+- **对象中的 `undefined`、`function`、`symbol`**：会被**忽略**（不序列化到结果）
+- **数组中的 `undefined`、`function`、`symbol`**：会被转为 `null`
+- **不支持循环引用**：遇到会抛错
+- **NaN、Infinity**：会被转为 `null`
+- **可选参数**：可传入函数（replacer）或数组过滤、控制序列化哪些属性
+- **示例**：
+  ```js
+  // 对象属性值为 undefined/function/symbol 被忽略
+  JSON.stringify({ a: undefined, b: function() {}, c: Symbol('id') });   // '{}'
+
+  // 数组项为 undefined/function/symbol 转为 null
+  JSON.stringify([undefined, function(){}, Symbol('x')]);   // '[null,null,null]'
+
+  // NaN 和 Infinity 转为 null
+  JSON.stringify({ x: NaN, y: Infinity }); // '{"x":null,"y":null}'
+  ```
+
 ### 实现一个JSON.stringify()
-```
+```js
 function myStringify(params, stack = []) {
     if (params === null) return 'null';
     const type = typeof params;
@@ -148,34 +199,87 @@ function myStringify(params, stack = []) {
 
 ```
 
+### Fiber
+> **Fiber 是 React 用于实现增量渲染的架构。**
+- **背景问题：**  
+  在 React 15 及以前，虚拟 DOM 的构建和 diff 算法采用递归实现，这一过程无法被中断。如果组件树很大、结构复杂，长时间占用主线程，就会造成页面卡顿、白屏，用户体验差。
 
-### fiber
-fiber是用来实现增量渲染的 react 15以前是递归的去构建虚拟DOM和diff算法，这个过程呢是不可以去中断的，如果组件树很大很复杂，就会导致主线程被占用很长时间，造成页面的卡顿和白屏 会影响用户体验，fiber框架 将我们整个渲染过拆分可以中断 可恢复的任务单元，可以利用浏览器的空闲时间 去逐步完成更新。fiber = 一个可中断的渲染任务单元（每一个元素对应一个fiber节点）fiber还引入了任务优先级 用户交互的优先级 > 数据获取 (fetch) > 过期任务 高优先级任务可以打断低优先级任务的执行 fiber的好处 可以实现更流畅的UI 更灵活的渲染控制
+- **Fiber 的改进：**  
+  Fiber 框架将整个渲染工作拆分为若干「可中断」「可恢复」的任务单元。每一个 React 元素都对应一个 Fiber 节点。Fiber 能够利用浏览器的空闲时间逐步完成渲染。
 
-React 「渲染」的核心：它就是内存中构建新虚拟 DOM（Fiber） + 执行 Diff 算法的过程，是 React 确定 “是否需要更新真实 DOM、更新哪些 DOM” 的前置计算步骤 —— 这个过程是否执行，和最终是否更新真实 DOM 无关；哪怕最终不更新 DOM，「渲染」依然可能发生
+- **任务优先级机制：**  
+  Fiber 支持任务优先级调度：
+    - 用户交互（如输入/点击）优先级最高
+    - 数据获取（如 fetch）次之
+    - 低优先级或过期任务最后处理
+  高优先级任务可以随时打断低优先级任务，确保交互最佳响应。
 
-### 为什么 react 需要fiber 而vue 不需要
-本质原因： 追踪依赖的方式不一样 
-（依赖追踪指的是：当组件使用了某些状态（state、prop））组件不知道自己用了哪些状态，不知道自己该不该更新
-react： 手动的去触发更新 ，不会去自动的追踪依赖，而是触发整颗树的渲染，即时组件的prop/state没变化 也要引起一次大规模的更新 （除非用memo/PureComponent优化）
-vue 采用的是响应式系统 + 响应的依赖追踪 组件初始化时自动的收集模版中用到的响应式数据作为依赖，只有依赖数据变化组件才会被更新，更新是精准的 局部的
+- **好处总结：**  
+  - 页面切换、动画等场景下，UI 渲染更流畅
+  - 渲染控制更灵活
 
-### react的diff 和vue的diff
-react 和 vue 都使用虚拟DOM和diff算法来高效更新真实DOM，通过diff算法来对比新旧虚拟 DOM 树。
-React 的 diff 算法基于 “同层比较” 策略，它不会跨层级对比节点。通过 key 来判断是否为相同节点。节点类型不同会直接销毁DOM构建新的DOM树，节点类型和Key一样就会复用。
-vue 同层比较。根据key. 查找最长的递归子序列，还会标记静态节点、变量提升、双端比较。
+**React 渲染的核心本质：**  
+它是在内存中**构建新的虚拟 DOM（Fiber）**，并**执行 Diff 算法**，用以判断“是否需要更新真实 DOM，以及需要更新哪些 DOM”。这个过程只是 React 计算更新的前置操作，**渲染发生与否，不代表最终真实 DOM 就一定会变更**；即使最终没有产生 DOM 更新，渲染依然可能会被触发。
 
-### 为什么需要 nextTick？ Vue.nextTick() 用于在下次 DOM 更新循环结束后执行回调
-Vue 的数据更新是异步批量处理的：
-当你修改响应式数据（如 this.count++），Vue 不会立即更新 DOM；
-而是将所有变更收集到一个队列中，在下一个（微任务或宏任务）中统一更新 DOM，避免重复渲染。
-优先使用 Promise.then（微任务）其次会降级到 mutationObserver() （微任务） 最后后降级到 setTimeout (宏任务)
+### 为什么 React 需要 Fiber，而 Vue 不需要？
+> **核心原因：依赖追踪机制不同。**
+- **依赖追踪说明**：组件在渲染时会用到某些状态（如 state、props）。如果框架能精确知道某个组件依赖了哪些数据，就能做到精准、局部的更新，否则就可能发生无计划的大面积重渲染。
+
+#### React
+- **更新触发**：React 默认是“手动触发更新”，没有自动依赖追踪。状态变化时一般会导致整颗树的自顶向下渲染（除非用 `memo`、`PureComponent` 等手动优化）。
+- **更新特性**：即使某些组件的 props/state 实际没变化，仍然会参与本轮渲染，容易造成大量无效的更新。
+- **Fiber 作用**：Fiber 把 React 的渲染拆解成可中断的小任务，在大批量组件更新时控制性能，防止主线程被长期阻塞。
+
+#### Vue
+- **响应式系统**：Vue 启动时会自动代理和跟踪模版里用到的每个响应式数据，建立“数据到组件”的依赖映射。
+- **精准更新**：当响应式数据变化时，只有依赖这个数据的组件会被精准更新，其它部分完全不受影响。无需类似 React Fiber 的机制去切片任务、避免卡顿。
+
+> **总结：**
+> - **React** 没有内建依赖追踪，所以大面积渲染时需要 Fiber 提供性能保障。
+> - **Vue** 依赖追踪精细，天生只会更新受影响的组件，无需 Fiber 这种架构。
+
+### React 和 Vue 的 Diff 算法对比
+React 和 Vue 均依赖虚拟 DOM 与 Diff 算法来高效更新真实 DOM。主要流程是：先构建新旧虚拟 DOM 树，随后比对两棵树的变化，只对差异部分做最小化操作。
+#### React 的 Diff 算法
+- **同层比较**：React 只会比较同一层级的节点，绝不会跨层级对比。
+- **key 的作用**：通过 key 判断节点是否复用，key 相同则节点复用，不同则删除重建。
+- **节点类型判断**：类型不同，直接销毁原节点并重新创建新节点。
+- **优化点**：通过 key、只比较同层，显著减少比较次数，提升渲染性能。
+
+#### Vue 的 Diff 算法
+- **同样采用同层比较**，也依据 key 来判断节点复用与否。
+- **额外优化**：
+  - **最长递增子序列（LIS）**：对有 key 的子节点，通过 LIS 算法减少 DOM 移动的次数，提升列表的高效重排能力。
+  - **静态提升**：Vue 在编译阶段会检测和标记静态节点，实现静态内容的跳过、缓存，减少不必要的比对。
+  - **双端比较**：利用首尾指针，从两侧向中间“夹逼”，进一步加速列表 diff 过程。
+
+> 总结：二者的重要共同点是“同层比较”和 key 标识，Vue 在此基础上通过更复杂的算法对复杂场景做了优化，使 DOM 操作更高效。
+
+### 为什么需要 `nextTick`？
+`Vue.nextTick()` 用于在下次 DOM 更新循环结束后执行回调。
+
+- **Vue 的数据更新是异步且批量的。**
+- 当你修改响应式数据（如 `this.count++`）时，Vue 不会立刻更新 DOM。
+- 所有变更会被收集到一个队列中，然后在下一个（微任务或宏任务）中统一更新 DOM，避免重复渲染消耗资源。
+
+**执行优先级：**
+
+> - 首选微任务：`Promise.then`
+> - 其次：`MutationObserver`（仍属微任务）
+> - 最后降级：`setTimeout`（宏任务）
+
+这样确保了回调总是在 DOM 更新完成后执行，适用于需要获得最新 DOM 状态的场景。
 
 
-### AI 的发展趋势是将重复性工作和简单需求开发自动化。当 AI 承担这些任务后，我们的价值体现在哪里？
-从工作价值上看，首先在于精准定义问题。在复杂的业务场景中，真正的挑战往往不是“如何做”，而是“做什么”和“为什么做”。AI 擅长执行明确指令、优化已有流程，却无法理解业务背后的深层痛点、组织目标或用户未被言明的真实需求。
-我们的核心价值，恰恰体现在：能够在信息模糊、目标冲突、资源受限的现实中，识别关键矛盾；将看似杂乱甚至相互抵触的诉求，提炼为清晰、可落地的问题；在技术可行性、锚定真正值得解决的问题。
-因此，技术工作的本质从来不只是编码——编码只是实现价值的手段，而非目的本身。人类更需要成为“定义者”和“决策者”
+### AI 的发展趋势是推动重复性工作和简单需求的自动化，AI 逐步承接这些任务后，我们的核心价值将体现在哪里？
+
+AI 越来越擅长执行标准明确、流程清晰的开发与操作，但它本质上仅能处理已定义、可量化的问题。面对复杂、多变且需求未明的业务环境——**真正的挑战往往不是“怎么做”，而是“做什么，为什么这样做”。**
+
+1. **精准定义问题**：在信息不完全、诉求不一致、资源有约束时，能够洞察本质，提炼明确的问题和目标。
+2. **跨领域理解与协调**：对业务环境、用户痛点、组织目标有深刻理解，并能权衡各方需求，形成可落地的方案。
+3. **创新与决策能力**：发现未被满足的机会，制定解决方案，推动技术与实际价值的融合。
+
+因此，技术工作的本质从不是单纯编写代码，而在于成为问题的发现者、定义者与决策推动者。编码仅是实现思路的工具，我们最重要的能力是创造性思维、战略性判断和持续学习适应变化的能力。
 
 ### 前端如何解决页面请求接口大规模并发问题
 1. 限制并发数量 ， 避免一次性发起过多请求导致的问题
@@ -185,70 +289,147 @@ Vue 的数据更新是异步批量处理的：
 5. 取消不必要请求 页面卸载取消请求 new AbortController()
 
 ### vite 原理
-- 开发阶段：基于原生 ES 模块（ESM），无需打包
-    1. 利用现代浏览器对 < script type="module" > 的原生支持 , 将 CommonJS转为 ESM
-    2. 按需加载：只编译和返回当前页面实际请求的模块，启动速度极快（与项目大小无关）
-    3. 不打包（No Bundle）：跳过传统构建工具（如 Webpack）的全量打包过程
-- 生产的时候仍然需要打包 
-    1. 开发时不打包，但生产环境仍需优化 使用 Rollup 打包
-    2. 内置使用 Rollup 进行 Tree Shaking、代码分割、压缩等
-- 智能重写 import 路径
-    1. 将源码中的裸导入（如 import vue from 'vue'）动态重写为合法 URL
-    ```
-        import { createApp } from '/node_modules/.vite/deps/vue.js?v=xxx';
-    ```
-### 前端性能监控指标
-1. FP （First Paint，首次绘制）浏览器首次将像素渲染到屏幕的时间（白屏时间），标志页面开始加载。
-2. FCP（First Contentful Paint，首次内容绘制）首次绘制文本、图片等有意义内容的时间，比 FP 更贴近用户感知
-3. LCP（Largest Contentful Paint，最大内容绘制） 视口内最大内容元素（如图片、文本块）渲染完成的时间，核心用户体验指标（目标：< 2.5s）
-4. TTI（Time to Interactive，可交互时间）页面加载后，用户可以流畅交互（点击、输入）的时间（无长任务阻塞）。
-5. CLS（Cumulative Layout Shift，累积布局偏移）视觉稳定性：页面是否“乱跳”
-6. 资源加载时间：HTML、CSS、JS、图片、接口等的下载、解析、执行时间
+
+**开发阶段（极速响应、无需打包）**
+- 基于原生 ES Module（ESM）：
+  - 利用现代浏览器对 `<script type="module">` 的原生支持，将 CommonJS 自动转为 ESM 格式解析。
+- **按需加载**：
+  - 只对实际访问页面所需的模块进行实时编译和返回，因此启动速度与项目体积无关，几乎秒开。
+- **No Bundle（不打包）**：
+  - 跳过 Webpack 等传统构建工具的全量打包环节，每次请求什么就返回什么，开发体验极快。
+
+**生产环境（优化打包）**
+- 生产环境下仍需构建优化，vite 内置 Rollup：
+  - 实现 `Tree Shaking`（摇树优化）、代码分割、压缩混淆等生产优化。
+  - 保证最终产物体积小、性能高。
+
+**动态重写 import 路径**
+- 源码中的裸模块导入（如 `import vue from 'vue'`），会被 vite 自动转换成带 hash 的绝对路径，以兼容浏览器原生模块系统。
+  ```js
+  import { createApp } from '/node_modules/.vite/deps/vue.js?v=哈希值';
+  ```
+### 前端性能监控核心指标
+
+- **FP（First Paint，首次绘制）**  
+  浏览器首次将内容像素渲染到屏幕的时间（即“白屏”消失），标志页面开始加载。
+
+- **FCP（First Contentful Paint，首次内容绘制）**  
+  首次绘制文本、图片等有意义内容的时间点，比 FP 更直观反映用户感知“页面开始有内容”。
+
+- **LCP（Largest Contentful Paint，最大内容绘制）**  
+  视口内最大内容元素（如图片、大文本块等）渲染完成的时间，是页面加载“看起来完成”的关键用户体验指标（建议 < 2.5 秒）。
+
+- **TTI（Time to Interactive，可交互时间）**  
+  页面完全可响应用户输入操作（如点击、输入）的时间，期间无长任务阻塞。
+
+- **CLS（Cumulative Layout Shift，累积布局偏移）**  
+  页面视觉稳定性指标，衡量页面元素是否出现“跳动、乱移”等问题。
+
+- **资源加载时长**  
+  包括 HTML、CSS、JS、图片、API 接口等各类静态与动态资源的下载、解析、执行时间。
 
 
 ### 如何保证用户的使用体验
-1. 控制页面的响应速度3s, 每增加1s 用户流失率增加7%
-2. 图片优化 压缩、合并、懒加载loading="lazy”， 使用响应式图片（srcset & sizes属性），根据设备屏,幕尺寸加载合适大小的图片
-3. 使用 Webpack、Vite 等工具的代码分割功能， 将代码拆分成多个小块，按需加载。摇树优化可以消除生产环境中未使用的代码。
-4. 合理设置 HTTP 缓存头（如 Cache-Control），对静态资源使用强缓存， 对页面内容使用协商缓存。
-5. 对 resize、scroll、input 等高频事件进行节流或防抖处理
-6. 批量操作 DOM（使用 documentFragment）
-7. 使用 transform 和 opacity 的属性实现动画，不会触发重排和重绘
-8. 将复杂的计算任务（如数据处理、图像操作）放入 Web Worker，避免阻塞主线程，保证页面流畅。
-9. 交互反馈在毫秒级别 100毫秒
-10. 性能监控系统，埋点， 错误日志的收集
-11. 合理的loading、骨架屏、
+
+1. **页面响应速度控制**：建议页面响应速度控制在 3 秒以内，每增加 1 秒，用户流失率会增加约 7%。
+2. **图片优化**：进行压缩与合并，采用懒加载（如 `loading="lazy"`），使用响应式图片（`srcset` & `sizes` 属性），根据设备屏幕尺寸加载合适大小的图片。
+3. **代码分割与按需加载**：合理利用 Webpack、Vite 等工具的代码分割能力，将代码切分为小块，按需加载，并通过摇树优化移除未使用的生产代码。
+4. **缓存管理**：为静态资源设置合理的 HTTP 缓存头（如 `Cache-Control`），静态文件使用强缓存，页面内容使用协商缓存。
+5. **高频事件优化**：对 `resize`、`scroll`、`input` 等高频事件采用节流或防抖技术，提升性能体验。
+6. **DOM 批量操作**：多次 DOM 操作可采用 `documentFragment`，批量更新，减少重绘与重排。
+7. **动画实现**：建议使用 `transform` 和 `opacity` 属性实现动画，这些属性不会触发布局与重绘，提升动画流畅度。
+8. **计算任务分离**：将复杂的数据处理或图像计算业务放入 Web Worker，避免主线程被阻塞，保证页面交互流畅。
+9. **交互反馈及时**：交互操作的反馈应控制在 100 毫秒以内，提升用户响应体验。
+10. **性能与错误监控**：建立性能监控系统和埋点机制，及时收集与分析错误日志。
+11. **友好的加载体验**：合理设计 loading、骨架屏等过渡界面，优化首次加载体验。
 
 
 
 ### 跨域解决方案
-> 跨域是指浏览器因同源策略限制，阻止不同协议、域名、端口号页面之间进行资源交互（如AJAX请求、DOM操作）
-1. CORS（跨域资源共享）现代浏览器默认支持的官方跨域解决方案，后端通过设置相应头，Access-Control-Allow-Origin ： 域名；明确的制定域名的跨域请求，简单请求（get 、post）预检请求（option）（content-Type: application/json）浏览器会先发送 OPTIONS 预检请求， 验证后端允许跨域后，再发送真实请求 
-优势：官方标准、支持所有 HTTP 方法、支持携带 Cookie、无需前端额外处理（仅后端配置）
-2. JSONP：早期解决跨域的主流方案 ， 用 script 标签不受同源策略限制的特性，通过动态创建 script 标签加载跨域资源，仅支持 GET 请求, 不支持跨域cookie携带。 易受xss攻击， 前端定义一个回调函数（如 callbackFn），用于接收跨域返回的数据；
 
-###  https 怎么保证数据安全
- - 数字证书 + CA认证
- 1. 服务器的公钥会交给第三方权威机构（CA）认证，生成「数字证书」（包含公钥、服务器域名、CA 签名）
- 2. 客户端拿到证书后，会验证 3 件事：证书是否由可信 CA 签发；证书域名是否和请求域名一致；证书是否未过期 / 未被吊销
- - 对称加密和非对称加密传递数据
-1. 非对称加密
- - 服务器有一对「公钥 + 私钥」：公钥可公开，私钥自己保管；
- - 客户端请求时，服务器把「带数字证书的公钥」发给客户端；
- - 客户端生成一个「随机对称密钥」（后续传数据用），用服务器公钥加密后发回服务器；
- - 服务器用私钥解密，拿到这个对称密钥
-2. 对称加密 （对称加密效率高，适合大量数据传输）。
-- 客户端和服务器用刚才协商的「对称密钥」加密所有传输数据， （请求头、请求体、响应内容）
+> **跨域**：指因浏览器同源策略限制，不同协议、域名、端口的页面之间无法直接进行资源交互（如 AJAX 请求、DOM 操作）。
 
-### flex: 1  flex: 1 1 0 缩写
-> Flex 项目的 flex 属性是 flex-grow、flex-shrink、flex-basis 的简写  flex: <flex-grow> <flex-shrink> <flex-basis>;
-    - flex-grow: 容器有剩余空间时，项目会按比例瓜分剩余空间（1 表示参与瓜分）
-    - flex-shrink: 容器空间不足时，项目会按比例缩小（1 表示参与收缩）
-    - flex-basis: 设置容器的初使尺寸 
+#### 1. **CORS（跨域资源共享）**
+- **简介**：现代浏览器官方、主流的跨域解决方案。
+- **实现方式**：后端设置响应头 `Access-Control-Allow-Origin: 域名`，支持指定/通配允许的跨域访问。
+- **流程优化**：
+  - **简单请求**（如 GET、普通 POST）：直接发送，浏览器自动处理。
+  - **预检请求**（如 Content-Type 为 `application/json` 或自定义 header）：浏览器先发 `OPTIONS` 请求，经后端允许后才发真实请求。
+- **优点**：
+  - 官方标准，支持全部 HTTP 方法
+  - 支持携带 Cookie
+  - 仅需后端配置，前端无需特殊处理
 
-### vue 使用nextTick 原因和场景 
- > 数据更新后， 立即操作 / 获取更新后的 DOM ---- 数据变了，想立刻用最新 DOM → 套一层 nextTick。
- - Vue 采用「异步更新 DOM」策略：当你修改 data 里的数据时，Vue 不会立刻更新 DOM，而是将数据变更缓存到「异步更新队列」，等当前同步代码执行完后，再批量更新 DOM（避免频繁操作 DOM 导致性能损耗）。
+#### 2. **JSONP**
+- **简介**：早期主流跨域方案，利用 `<script>` 标签不受同源策略限制的特性实现，**仅支持 GET 请求**。
+- **实现方式**：
+  1. 前端定义全局回调函数（如 `callbackFn`）。
+  2. 动态创建 `<script src="http://example.com/data?callback=callbackFn">` 标签。
+  3. 后端返回形如 `callbackFn(data)` 的函数调用，前端即可接收处理数据。
+- **限制**：
+  - 只能 GET，不支持 POST/PUT 等其他请求
+  - 不支持跨域携带 Cookie
+  - 存在 XSS 安全风险
+
+### HTTPS 如何保证数据安全？
+
+#### 一、数字证书 & CA 认证
+1. **数字证书申请与签发**  
+   - 服务器向权威第三方机构（CA）申请证书，由 CA 对服务器“公钥”进行认证，生成数字证书（证书内容含公钥、服务器域名、CA签名等）。
+2. **客户端校验证书**  
+   - 客户端收到服务器证书后，会校验：
+     - 证书是否由受信任的 CA 机构签发
+     - 证书域名与访问域名是否一致
+     - 证书有效期是否正常、未吊销
+
+#### 二、加密通信流程
+1. **非对称加密（密钥协商阶段）**
+   - 服务器持有一对「公钥 & 私钥」（公钥公开、私钥保密）。
+   - 客户端通过证书获得服务器公钥。
+   - 客户端生成「随机对称密钥」，并用服务器公钥加密后发送给服务器。
+   - 服务器接收后用私钥解密，拿到对称密钥。
+
+2. **对称加密（数据传输阶段）**
+   - 客户端与服务器后续全程，均使用刚才协商好的「对称密钥」来加密/解密数据（包括请求头、请求体、响应内容等）。
+   - 优点：对称加密速度快，适合大数据量的安全传输。
+
+> **总结：HTTPS 的安全保障 = 可信CA签发证书认证 + 非对称加密完成密钥协商 + 对称加密高效数据传输。**
+
+### `flex: 1` / `flex: 1 1 0` 属性详解
+
+Flex 的简写属性格式：  
+`flex: <flex-grow> <flex-shrink> <flex-basis>;`
+
+- **`flex-grow`**：定义项目在容器有剩余空间时的放大比例（如：1 表示参与分配剩余空间）。
+- **`flex-shrink`**：定义项目在空间不足时的缩小比例（如：1 表示参与收缩）。
+- **`flex-basis`**：设置项目的初始主轴尺寸（如：`0` 表示不预留主轴空间，`auto` 则由内容决定）。
+
+常用缩写示例：  
+- `flex: 1` 等同于 `flex: 1 1 0`，即占据剩余空间，可收缩，初始宽度为 0。
+- `flex: 1 0 auto` 表示可放大但不可收缩，初始宽度为内容自动决定。
+
+
+### Vue 中 `nextTick` 的作用及典型场景
+
+#### 📌 为什么需要 `nextTick`？
+- **核心原因**：Vue 采用“异步更新 DOM”策略。修改 `data` 后，DOM 不会立刻更新，而是先进入异步队列，待本轮同步代码执行完毕后，Vue 再统一批量更新 DOM —— 这样可以提升性能，避免频繁 DOM 操作带来的性能损耗。
+- **典型痛点**：有些情况我们希望“**数据变了，马上要用最新的 DOM 元素**”，这时就需要用 `nextTick`。
+
+#### ✅ 常见应用场景
+- 数据变化后，需读取/操作最新 DOM（如获取宽高、获取输入框焦点、手动滚动等）：
+    ```js
+    // 错误示例（此时 DOM 还没更新）
+    this.showInput = true;
+    this.$refs.input.focus(); // 有可能拿到的是旧 DOM 或 undefined
+
+    // 正确写法
+    this.showInput = true;
+    this.$nextTick(() => {
+      this.$refs.input.focus(); // 此时一定是最新 DOM
+    });
+    ```
+
+> **总结**：数据更新后要马上操作最新 DOM，务必套一层 `nextTick`。
 
 ### Map Set WeakMap  WeakSet
 > 区别 需要存对象，且希望对象不用时自动回收 → 用 WeakMap/WeakSet；需要遍历 / 存基本类型 → 用 Map/Set。
@@ -584,11 +765,38 @@ fetch('https://api.example.com/large-file.log')
     - 加载时机不同：运行时同步加载，执行在require语句才去加载，会阻塞后续代码，同步读取执行文件， 执行完成后才去继续下面代码
     - 值拷贝 基本类型：拷贝变量当前值，导出后内外变量相互独立，内部修改不影响外部导入值； 引用类型：拷贝内存引用地址，可修改内部属性（同步外部），但无法同步对象本身的引用替换
     - 支持动态导入：路径可使用变量、表达式拼接（如 require('./' + name + '.js')），语法灵活
+    - 可以在代码的任何位置使用（包括条件语句、函数内部）
+    - Node.js 环境原生支持，浏览器环境需要打包工具（如 webpack）转换
+    - 导出方式：module.exports = {} 或 exports.xxx = xxx
 2. import/export 属于ES6 模块规范   export / export default
     - 编译时（静态）异步加载，编译阶段就完成了解析，不阻塞运行时代码，底层异步加载模块
     - 实时绑定： 导入的变量不是拷贝，而是对导出变量的实时引用，内外共享同一变量实例， 导出模块内部修改变量，会实时同步到所有导入方。导入方仅拥有只读权限，无法直接修改绑定本身
-    - 
+    - 静态导入：路径必须是字符串字面量，不能使用变量
+    - 必须写在文件顶部，不能在条件语句或函数内部使用（顶层导入）
+    - 导出方式：export const/function/class 或 export default
+    - Tree-shaking 友好：静态分析可以移除未使用的代码
 
+### script 标签上的常用属性
+1. **src**  
+   指定要加载的外部 JavaScript 文件路径。如：`<script src="main.js"></script>`
+2. **type**  
+   指定脚本类型。常见值：
+   - `text/javascript`（默认，通常可省略）
+   - `module`  启用 ES6 模块（支持 `import/export`），如：`<script type="module" src="main.js"></script>`
+   - 其他类型如 `application/json` 仅用于数据
+3. **async**  
+   异步加载脚本。脚本下载和页面同时进行，下载完成立即执行（不保证顺序）。适合独立、不依赖顺序的脚本。  
+   如：`<script async src="a.js"></script>`
+4. **defer**  
+   脚本延迟执行。下载和页面解析并行，等 HTML 解析完成后按顺序执行所有 defer 脚本（只在 src 外链时有效）。适合依赖顺序的多个脚本。  
+   如：`<script defer src="b.js"></script>`
+
+5. **nomodule**  
+   指定在**不支持 ES6 模块**的浏览器才加载，在支持模块的浏览器会忽略。通常用于兼容老浏览器：  
+   ```
+   <script type="module" src="modern.js"></script>
+   <script nomodule src="legacy.js"></script>
+   ```
 
 
 ### 不同标签间的通讯方式
@@ -781,23 +989,9 @@ git pull origin main
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### redux 和 rematch
 > Rematch 是基于 Redux 的封装，保留了 Redux 的核心能力（如中间件、时间旅行调试），但大幅简化了样板代码和配置流程，让状态管理更直观，rematch 不用管理繁琐的action
-```
+```js
 // rematch
 const countModels =  {
     state: {
@@ -846,7 +1040,7 @@ const incrementAsync = () => {
 }
 ```
 
-```
+```js
 // redux 
 const initialState = {
     count: 0
