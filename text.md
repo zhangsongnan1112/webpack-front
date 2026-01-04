@@ -1185,6 +1185,45 @@ requestWithTimeout('https://api.example.com/data');
   ```
   适合同源下任意标签、iframe实时消息广播。
 
+### File 和 Blob 的区别
+
+- **Blob（Binary Large Object）**  
+  表示不可变的原始二进制数据。可手动通过 `new Blob()` 创建，用于存储图片、视频、二进制流等内容。**仅包含数据本身，不包含文件名、修改时间等元信息**。
+
+- **File**  
+  继承自 Blob，是 Blob 的子类，**除了拥有 Blob 的数据特性，还包含文件名、最后修改时间等属性**（如 `name`、`lastModified`）。**`File` 对象一般由用户通过 `<input type="file">` 或拖拽文件生成**，也可通过 `new File()` 构造
+
+1. 创建 Blob（手动生成）
+
+```js
+// 可以通过 `URL.createObjectURL(blob)` 生成一个临时下载链接，<a>` 标签来实现下载
+const blob = new Blob(['Hello, world!'], { type: 'text/plain' });
+console.log(blob); // Blob {size: 13, type: "text/plain"}
+const url = URL.createObjectURL(blob);
+
+```
+
+2. 创建 File（手动生成）  
+```js
+// 虽不常用，现代浏览器支持手动 new File
+const file = new File(['Hello, file!'], 'hello.txt', {
+  type: 'text/plain',
+  lastModified: Date.now()
+});
+console.log(file.name);          // "hello.txt"
+console.log(file.lastModified);  // 时间戳
+
+<input type="file" id="fileInput">
+<script>
+  fileInput.addEventListener('change', (e) => {
+    const realFile = e.target.files[0];
+    console.log('真实文件：', realFile.name); 
+  });
+</script>
+```
+
+
+
 ### px 转 rem 原理与实现
 
 `rem`（root em）是一种相对于根元素（通常是 `<html>`）字体大小的单位。  
