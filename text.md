@@ -1,5 +1,6 @@
 **1. `element.getBoundingClientRect()`**  
 获取元素相对于视口的位置和大小信息。
+
 **2. `IntersectionObserver`**  
 异步监听元素与视口/根元素交叉状态，解决 `scroll` 事件监听可见性带来的性能问题。  
 ```js
@@ -1185,15 +1186,23 @@ requestWithTimeout('https://api.example.com/data');
   ```
   适合同源下任意标签、iframe实时消息广播。
 
-### File 和 Blob 的区别
+### File、 Blob、 FormData、 Base64
 
-- **Blob（Binary Large Object）**  
-  表示不可变的原始二进制数据。可手动通过 `new Blob()` 创建，用于存储图片、视频、二进制流等内容。**仅包含数据本身，不包含文件名、修改时间等元信息**。
+- **Blob**  
+  表示不可变的原始二进制数据。仅含二进制数据， 可手动通过 `new Blob()` 创建，用于存储图片、视频、二进制流等内容。
+  大文件分片（Blob.slice()）、 前端生成文件、 创建临时文件 URL（URL.createObjectURL()）；
+  **仅包含数据本身，不包含文件名、修改时间等元信息， 无文件元信息**。
 
 - **File**  
-  继承自 Blob，是 Blob 的子类，**除了拥有 Blob 的数据特性，还包含文件名、最后修改时间等属性**（如 `name`、`lastModified`）。**`File` 对象一般由用户通过 `<input type="file">` 或拖拽文件生成**，也可通过 `new File()` 构造
+  继承自 Blob，是 Blob 的子类， 包含Blob的所有特性，**除了拥有 Blob 的数据特性，还包含文件名、最后修改时间等属性**（如 `name`、`lastModified`）。**`File` 对象一般由用户通过 `<input type="file">` 或拖拽文件生成**，也可通过 `new File()` 构造, el-upload 拿到的 file.raw 就是 File 对象
 
-1. 创建 Blob（手动生成）
+- **FormData**  
+  表单的键值对数据容器，主流文件上传方式, （支持多文件 + 多参数）、兼容所有后端表单解析逻辑；FormData.append('file', File)
+
+-  **Base64**  
+  二进制数据的文本编码格式，格式：data:[MIME];base64,xxx ;  需编码 / 解码, 小文件嵌入 JSON/HTML、纯文本接口传输
+ 
+1. 创建 Blob（手动生成）前端生成文件 
 
 ```js
 // 可以通过 `URL.createObjectURL(blob)` 生成一个临时下载链接，<a>` 标签来实现下载
@@ -1220,6 +1229,52 @@ console.log(file.lastModified);  // 时间戳
     console.log('真实文件：', realFile.name); 
   });
 </script>
+```
+3. Blob ↔ File 互转
+```js
+// ① Blob 转 File（手动加元信息）
+const blob = new Blob(['测试内容'], { type: 'text/plain' });
+const file = new File([blob], '自定义文件名.txt', { type: blob.type });
+
+// ② File 本质是 Blob，可直接用 Blob 方法
+const file = document.querySelector('input[type=file]').files[0];
+const blobSlice = file.slice(0, 1024); // 切割文件（分片上传核心）
+
+```
+4. FormData 完整上传示例（适配 el-upload）
+```js
+// 结合 el-upload 的 fileList 上传
+handleUpload() {
+  const formData = new FormData();
+  // ① 追加文件（File/Blob）
+  this.fileList.forEach(item => {
+    formData.append('files', item.raw); // item.raw 是 File 对象
+  });
+  // ② 追加普通参数（如 channelCode）
+  formData.append('channelCode', 'test001');
+  
+  // ③ 发送请求（无需手动设置 Content-Type，axios 自动处理）
+  axios.post('/api/upload', formData, {
+    onUploadProgress: (e) => {
+      // 补充：监听上传进度（实战常用）
+      const progress = (e.loaded / e.totaxxl) * 100;
+      console.log(`进度：${progress.toFixed(2)}%`);
+    }
+  });
+}
+```
+
+3. Base64操作 
+```js
+// 1. 把上面的Blob转成Base64
+const reader = new FileReader();
+reader.onload = (e) => {
+  const base64Str = e.target.result;
+  console.log(base64Str); // data:text/plain;base64,5oiR5piv5rWL6K+V5YaF5a65（一串文本）
+  // 2. 要使用这个内容，需先解码（把文本转回二进制）
+  const decodedStr = atob(base64Str.split(',')[1]); // 解码后："我是测试内容"
+};
+reader.readAsDataURL(blob);
 ```
 
 
